@@ -4,14 +4,14 @@ import java.math.BigDecimal;
 
 import com.chethu.paymentledgerservice.domain.AccountStatus;
 
-public class AccountDto {
+public class AccountResponse {
     private Long id;
     private String accountNumber;
     private String ownerName;
     private BigDecimal balance;
     private AccountStatus status;
 
-    public AccountDto(Long id, String accountNumber, String ownerName, BigDecimal balance, AccountStatus status){
+    public AccountResponse(Long id, String accountNumber, String ownerName, BigDecimal balance, AccountStatus status){
         this.id = id;
         this.accountNumber= accountNumber;
         this.ownerName= ownerName;
