@@ -15,4 +15,5 @@ public class CreateAccountRequest {
     public void setOwnerName(String ownerName) {
         this.ownerName = ownerName;
     }
+
 }
