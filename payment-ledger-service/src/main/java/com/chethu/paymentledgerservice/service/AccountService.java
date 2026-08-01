@@ -1,18 +1,16 @@
 package com.chethu.paymentledgerservice.service;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.stereotype.Service;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
-import com.chethu.paymentledgerservice.domain.AccountStatus;
+import org.springframework.stereotype.Service;
+
 import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.CreateAccountRequest;
 import com.chethu.paymentledgerservice.dto.UpdateAccountRequest;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
+import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
 import com.chethu.paymentledgerservice.repository.AccountRepository;
 
 @Service
@@ -43,9 +41,7 @@ public class AccountService {
 
     private AccountEntity findAccountById(Long id){
         return accountRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException (
-                HttpStatus.NOT_FOUND,"Account not found"
-            ));
+            .orElseThrow(() -> new AccountNotFoundException(id));
     }
 
     public AccountResponse getAccountById(Long id){
