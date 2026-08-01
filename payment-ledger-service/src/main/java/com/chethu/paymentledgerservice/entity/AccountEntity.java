@@ -3,6 +3,7 @@ package com.chethu.paymentledgerservice.entity;
 import java.math.BigDecimal;
 
 import com.chethu.paymentledgerservice.domain.AccountStatus;
+import com.chethu.paymentledgerservice.exception.InsufficientBalanceException;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+
 
 @Entity
 @Table (name= "accounts")
@@ -64,6 +66,17 @@ public class AccountEntity {
 
     public void changeOwnerName(String ownerName){
         this.ownerName= ownerName;
+    }
+
+    public void deposit(BigDecimal amount){
+        this.balance = this.balance.add(amount);
+    }
+
+    public void withdraw(BigDecimal amount, BigDecimal minimumBalance){
+        BigDecimal newBalance = this.balance.subtract(amount);
+        if (newBalance.compareTo(minimumBalance)<0) 
+            throw new InsufficientBalanceException();
+        this.balance = newBalance;
     }
 
 }

@@ -1,13 +1,16 @@
 package com.chethu.paymentledgerservice.service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.CreateAccountRequest;
+import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
 import com.chethu.paymentledgerservice.dto.UpdateAccountRequest;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
@@ -15,7 +18,7 @@ import com.chethu.paymentledgerservice.repository.AccountRepository;
 
 @Service
 public class AccountService {
-
+    private static final BigDecimal MINIMUM_BALANCE = new BigDecimal("50000.00");
     private final AccountRepository accountRepository;
 
     public AccountService(AccountRepository accountRepository){
@@ -69,6 +72,22 @@ public class AccountService {
         AccountEntity account = findAccountById(id);
         account.changeOwnerName(request.getOwnerName());
         return toResponse(accountRepository.save(account));
+    }
+
+    @Transactional
+    public AccountResponse deposit(Long id, MoneyOperationRequest request){
+        AccountEntity account = findAccountById(id);
+        account.deposit(request.getAmount());
+        AccountEntity updatedAccount = accountRepository.save(account);
+        return toResponse(updatedAccount);
+    }
+
+    @Transactional
+    public AccountResponse withdraw(Long id, MoneyOperationRequest request){
+        AccountEntity account = findAccountById(id);
+        account.withdraw(request.getAmount(), MINIMUM_BALANCE);
+        AccountEntity updatedAccount = accountRepository.save(account);
+        return toResponse(updatedAccount);
     }
 
 }

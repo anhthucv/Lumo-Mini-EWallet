@@ -15,7 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex, HttpServletRequest request){
+    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpServletRequest request){
         String message = "Invalid request";
         if (!ex.getBindingResult().getFieldErrors().isEmpty()){
             message = ex.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
@@ -40,5 +40,17 @@ public class GlobalExceptionHandler {
             request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(InsufficientBalanceException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientBalance(InsufficientBalanceException ex, HttpServletRequest request){
+        ErrorResponse response = new ErrorResponse(
+            Instant.now(),
+            HttpStatus.BAD_REQUEST.value(),
+            "INSUFFICIENT_BALANCE",
+            ex.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 }

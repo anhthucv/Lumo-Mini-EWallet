@@ -2,6 +2,7 @@ package com.chethu.paymentledgerservice.controller;
 
 import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.CreateAccountRequest;
+import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
 import com.chethu.paymentledgerservice.dto.UpdateAccountRequest;
 import com.chethu.paymentledgerservice.service.AccountService;
 
@@ -11,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+
 
 @RestController
 @RequestMapping("/accounts")
@@ -40,7 +43,7 @@ public class AccountController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AccountResponse> updateAccount(@Valid @PathVariable Long id, @RequestBody UpdateAccountRequest request){
+    public ResponseEntity<AccountResponse> updateAccount(@PathVariable Long id, @Valid @RequestBody UpdateAccountRequest request){
         AccountResponse response  = accountService.updateAccount(id,request);
         return ResponseEntity.ok(response);
     }
@@ -50,4 +53,17 @@ public class AccountController {
         accountService.deleteAccount(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/deposit")
+    public ResponseEntity<AccountResponse> deposit(@PathVariable Long id, @Valid @RequestBody MoneyOperationRequest request) {
+        AccountResponse response = accountService.deposit(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/withdraw")
+    public ResponseEntity<AccountResponse> withdraw(@PathVariable Long id, @Valid @RequestBody MoneyOperationRequest request) {
+        AccountResponse response = accountService.withdraw(id, request);
+        return ResponseEntity.ok(response);
+    }
+    
 }
