@@ -53,4 +53,17 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
+
+    @ExceptionHandler(InvalidTransferException.class)
+        public ResponseEntity<ErrorResponse> handleInvalidTransferException(InvalidTransferException ex, HttpServletRequest request){
+        ErrorResponse response = new ErrorResponse(
+            Instant.now(),
+            HttpStatus.BAD_REQUEST.value(),
+            "INVALID_TRANSFER",
+            ex.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
 }
+
