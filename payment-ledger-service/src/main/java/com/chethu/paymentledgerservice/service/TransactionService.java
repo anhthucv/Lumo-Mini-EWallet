@@ -12,13 +12,17 @@ import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.dto.TransactionResponse;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.entity.TransactionEntity;
+import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
+import com.chethu.paymentledgerservice.repository.AccountRepository;
 import com.chethu.paymentledgerservice.repository.TransactionRepository;
 
 @Service
 public class TransactionService {
     private final TransactionRepository transactionRepository;
-    public TransactionService (TransactionRepository transactionRepository){
+    private final AccountRepository accountRepository;
+    public TransactionService (TransactionRepository transactionRepository, AccountRepository accountRepository){
         this.transactionRepository = transactionRepository;
+        this.accountRepository = accountRepository;
     }
 
     private TransactionResponse toResponse(TransactionEntity transaction){
@@ -40,6 +44,7 @@ public class TransactionService {
     }
 
     public Page<TransactionResponse> getHistoryByAccount(Long accountId, Pageable pageable){
+        if (!accountRepository.existsById(accountId)) throw new AccountNotFoundException(accountId);
         Page<TransactionEntity> transactions = transactionRepository.getHistoryByAccount(accountId, pageable);
         Page<TransactionResponse> responses = transactions.map(this::toResponse);
         return responses;
