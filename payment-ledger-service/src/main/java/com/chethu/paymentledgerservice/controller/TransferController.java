@@ -12,7 +12,7 @@ import com.chethu.paymentledgerservice.service.TransferService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/transfer")
+@RequestMapping("/transfers")
 public class TransferController {
     private final TransferService transferService;
     public TransferController(TransferService transferService){

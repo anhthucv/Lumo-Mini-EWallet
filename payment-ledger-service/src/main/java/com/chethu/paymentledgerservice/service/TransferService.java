@@ -3,6 +3,7 @@ package com.chethu.paymentledgerservice.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.domain.WalletRules;
 import com.chethu.paymentledgerservice.dto.TransferRequest;
 import com.chethu.paymentledgerservice.dto.TransferResponse;
@@ -16,8 +17,10 @@ public class TransferService {
     
 
     private final AccountRepository accountRepository;
-    public TransferService(AccountRepository accountRepository){
+    private final TransactionService transactionService;
+    public TransferService(AccountRepository accountRepository, TransactionService transactionService){
         this.accountRepository = accountRepository;
+        this.transactionService = transactionService;
 
     }
 
@@ -37,6 +40,9 @@ public class TransferService {
         toAccount.deposit(request.getAmount());
         AccountEntity updatedFromAccount = accountRepository.save(fromAccount);
         AccountEntity updatedToAccount = accountRepository.save(toAccount);
+
+        transactionService.recordTransaction(fromAccount, toAccount, TransactionType.TRANSFER_OUT, request.getAmount(),fromAccount.getBalance());
+        transactionService.recordTransaction(toAccount, fromAccount, TransactionType.TRANSFER_IN, request.getAmount(),toAccount.getBalance());
         return new TransferResponse(
             updatedFromAccount.getId(), 
             updatedToAccount.getId(),

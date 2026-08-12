@@ -7,6 +7,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.domain.WalletRules;
 import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.CreateAccountRequest;
@@ -19,10 +20,13 @@ import com.chethu.paymentledgerservice.repository.AccountRepository;
 @Service
 public class AccountService {
     private final AccountRepository accountRepository;
+    private final TransactionService transactionService;
 
-    public AccountService(AccountRepository accountRepository){
+    public AccountService(AccountRepository accountRepository,TransactionService transactionService){
         this.accountRepository=accountRepository;
+        this.transactionService = transactionService;
     }
+
 
     private AccountResponse toResponse(AccountEntity account) {
         return new AccountResponse(
@@ -78,6 +82,7 @@ public class AccountService {
         AccountEntity account = findAccountById(id);
         account.deposit(request.getAmount());
         AccountEntity updatedAccount = accountRepository.save(account);
+        transactionService.recordTransaction(account, null, TransactionType.DEPOSIT, request.getAmount(),account.getBalance());
         return toResponse(updatedAccount);
     }
 
@@ -86,6 +91,7 @@ public class AccountService {
         AccountEntity account = findAccountById(id);
         account.withdraw(request.getAmount(), WalletRules.MINIMUM_BALANCE);
         AccountEntity updatedAccount = accountRepository.save(account);
+        transactionService.recordTransaction(account, null, TransactionType.WITHDRAW, request.getAmount(), account.getBalance());
         return toResponse(updatedAccount);
     }
 
