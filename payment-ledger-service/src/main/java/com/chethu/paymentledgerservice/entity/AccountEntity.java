@@ -13,6 +13,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 
 
 @Entity
@@ -30,6 +33,10 @@ public class AccountEntity {
 
     @Column(name="balance",nullable=false, precision=19, scale=2)
     private BigDecimal  balance;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", unique = true)
+    private UserEntity user;
 
     @Enumerated(EnumType.STRING) 
     @Column(name="status",nullable = false)
@@ -62,6 +69,14 @@ public class AccountEntity {
 
     public AccountStatus getStatus(){
         return this.status;
+    }
+
+    public UserEntity getUser() {
+        return user;
+    }
+
+    public void getUser(UserEntity user) {
+        this.user = user;
     }
 
     public void changeOwnerName(String ownerName){
