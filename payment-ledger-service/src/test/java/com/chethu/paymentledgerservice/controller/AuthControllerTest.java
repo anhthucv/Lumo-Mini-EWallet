@@ -11,17 +11,21 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
+import com.chethu.paymentledgerservice.dto.LoginResponse;
 import com.chethu.paymentledgerservice.dto.RegisterResponse;
 import com.chethu.paymentledgerservice.dto.VerificationCodeResponse;
 import com.chethu.paymentledgerservice.domain.AccountStatus;
 import com.chethu.paymentledgerservice.domain.UserRole;
 import com.chethu.paymentledgerservice.domain.UserStatus;
+import com.chethu.paymentledgerservice.exception.InvalidCredentialsException;
 import com.chethu.paymentledgerservice.exception.DuplicateEmailException;
 import com.chethu.paymentledgerservice.exception.GlobalExceptionHandler;
 import com.chethu.paymentledgerservice.exception.InvalidVerificationCodeException;
+import com.chethu.paymentledgerservice.exception.UserLockedException;
 import com.chethu.paymentledgerservice.exception.VerificationCodeExpiredException;
 import com.chethu.paymentledgerservice.exception.VerificationCodeNotFoundException;
 import com.chethu.paymentledgerservice.exception.VerificationCodeResendTooSoonException;
+import com.chethu.paymentledgerservice.service.LoginService;
 import com.chethu.paymentledgerservice.service.EmailVerificationService;
 import com.chethu.paymentledgerservice.service.RegistrationService;
 
@@ -31,14 +35,16 @@ public class AuthControllerTest {
     private MockMvc mockMvc;
     private StubEmailVerificationService emailVerificationService;
     private StubRegistrationService registrationService;
+    private StubLoginService loginService;
 
     @BeforeEach
     void setUp() {
         emailVerificationService = new StubEmailVerificationService();
         registrationService = new StubRegistrationService();
+        loginService = new StubLoginService();
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
-        mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(emailVerificationService, registrationService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(emailVerificationService, registrationService, loginService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setValidator(validator)
                 .build();
@@ -193,6 +199,102 @@ public class AuthControllerTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("VALIDATION_ERROR")));
     }
 
+    @Test
+    void login_shouldReturnOk_forValidRequest() throws Exception {
+        loginService.response = new LoginResponse(
+                7L,
+                "user@example.com",
+                "Nguyen Van A",
+                UserRole.USER,
+                UserStatus.ACTIVE);
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "email": "user@example.com",
+                          "password": "secret-password"
+                        }
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Nguyen Van A")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("user@example.com")));
+    }
+
+    @Test
+    void login_shouldReturnBadRequest_forBlankEmail() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "email": "",
+                          "password": "secret-password"
+                        }
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("VALIDATION_ERROR")));
+    }
+
+    @Test
+    void login_shouldReturnBadRequest_forInvalidEmail() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "email": "not-an-email",
+                          "password": "secret-password"
+                        }
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("VALIDATION_ERROR")));
+    }
+
+    @Test
+    void login_shouldReturnBadRequest_forBlankPassword() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "email": "user@example.com",
+                          "password": ""
+                        }
+                        """))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("VALIDATION_ERROR")));
+    }
+
+    @Test
+    void login_shouldReturnUnauthorized_forInvalidCredentials() throws Exception {
+        loginService.throwable = new InvalidCredentialsException();
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "email": "user@example.com",
+                          "password": "wrong-password"
+                        }
+                        """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("INVALID_CREDENTIALS")));
+    }
+
+    @Test
+    void login_shouldReturnLocked_forLockedUser() throws Exception {
+        loginService.throwable = new UserLockedException();
+
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "email": "user@example.com",
+                          "password": "secret-password"
+                        }
+                        """))
+                .andExpect(status().isLocked())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("USER_LOCKED")));
+    }
+
     private static final class StubEmailVerificationService extends EmailVerificationService {
         private RuntimeException throwable;
 
@@ -219,6 +321,23 @@ public class AuthControllerTest {
 
         @Override
         public RegisterResponse register(com.chethu.paymentledgerservice.dto.RegisterRequest request) {
+            if (throwable != null) {
+                throw throwable;
+            }
+            return response;
+        }
+    }
+
+    private static final class StubLoginService extends LoginService {
+        private RuntimeException throwable;
+        private LoginResponse response;
+
+        private StubLoginService() {
+            super(null, null);
+        }
+
+        @Override
+        public LoginResponse login(com.chethu.paymentledgerservice.dto.LoginRequest request) {
             if (throwable != null) {
                 throw throwable;
             }
