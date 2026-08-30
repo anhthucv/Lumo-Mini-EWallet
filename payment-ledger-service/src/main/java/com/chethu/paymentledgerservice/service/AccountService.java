@@ -21,10 +21,13 @@ import com.chethu.paymentledgerservice.repository.AccountRepository;
 public class AccountService {
     private final AccountRepository accountRepository;
     private final TransactionService transactionService;
+    private final AccountNumberGenerator accountNumberGenerator;
 
-    public AccountService(AccountRepository accountRepository,TransactionService transactionService){
+    public AccountService(AccountRepository accountRepository,TransactionService transactionService,
+            AccountNumberGenerator accountNumberGenerator){
         this.accountRepository=accountRepository;
         this.transactionService = transactionService;
+        this.accountNumberGenerator = accountNumberGenerator;
     }
 
 
@@ -39,7 +42,7 @@ public class AccountService {
     }
 
     public AccountResponse createAccount(CreateAccountRequest request) {
-        String accountNumber= "ACC-" + System.currentTimeMillis();
+        String accountNumber= accountNumberGenerator.generateUniqueAccountNumber();
         AccountEntity account = new AccountEntity(accountNumber,request.getOwnerName());
         AccountEntity savedAccount = accountRepository.save(account);
         return toResponse(savedAccount);

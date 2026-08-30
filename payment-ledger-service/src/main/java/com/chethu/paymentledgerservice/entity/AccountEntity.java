@@ -48,7 +48,7 @@ public class AccountEntity {
         this.ownerName= ownerName;
         this.accountNumber= accountNumber;
         this.status = AccountStatus.ACTIVE;
-        this.balance= BigDecimal.ZERO.setScale(2);
+        this.balance= BigDecimal.ZERO;
     }
 
     public String getOwnerName(){
@@ -75,7 +75,7 @@ public class AccountEntity {
         return user;
     }
 
-    public void getUser(UserEntity user) {
+    public void assignUser(UserEntity user) {
         this.user = user;
     }
 

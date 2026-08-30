@@ -97,6 +97,10 @@ public class EmailVerificationEntity {
         this.status = EmailVerificationStatus.USED;
     }
 
+    public void markExpired() {
+        this.status = EmailVerificationStatus.EXPIRED;
+    }
+
     public void incrementFailedAttempts() {
         this.failedAttempts++;
     }

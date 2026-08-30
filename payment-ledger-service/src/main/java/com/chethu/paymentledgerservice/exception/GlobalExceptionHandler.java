@@ -102,4 +102,43 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(response);
     }
+
+    @ExceptionHandler(VerificationCodeNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleVerificationCodeNotFound(VerificationCodeNotFoundException ex,
+            HttpServletRequest request){
+        ErrorResponse response = new ErrorResponse(
+            Instant.now(),
+            HttpStatus.NOT_FOUND.value(),
+            "VERIFICATION_CODE_NOT_FOUND",
+            ex.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(VerificationCodeExpiredException.class)
+    public ResponseEntity<ErrorResponse> handleVerificationCodeExpired(VerificationCodeExpiredException ex,
+            HttpServletRequest request){
+        ErrorResponse response = new ErrorResponse(
+            Instant.now(),
+            HttpStatus.BAD_REQUEST.value(),
+            "VERIFICATION_CODE_EXPIRED",
+            ex.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(InvalidVerificationCodeException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidVerificationCode(InvalidVerificationCodeException ex,
+            HttpServletRequest request){
+        ErrorResponse response = new ErrorResponse(
+            Instant.now(),
+            HttpStatus.BAD_REQUEST.value(),
+            "INVALID_VERIFICATION_CODE",
+            ex.getMessage(),
+            request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
 }
