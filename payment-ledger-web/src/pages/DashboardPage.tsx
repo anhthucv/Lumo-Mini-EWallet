@@ -35,11 +35,11 @@ export default function DashboardPage() {
             </li>
             <li>
               <span className="feature-badge">✓</span>
-              Protected endpoints can reuse the Authorization helper later
+              Protected wallet requests reuse the shared Authorization helper
             </li>
             <li>
               <span className="feature-badge">✓</span>
-              No wallet, transfer, or admin features were added ahead of scope
+              Money movement and transaction history remain out of scope
             </li>
           </ul>
         </aside>
@@ -83,7 +83,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="banner success">
-            You are signed in. This is a minimal landing state until the wallet pages are added.
+            You are signed in. Open My Wallet to review your current account balance.
           </div>
 
           <div className="banner warning">
@@ -91,6 +91,9 @@ export default function DashboardPage() {
           </div>
 
           <div className="session-actions">
+            <Link to="/wallet" className="primary-button secondary-button-link">
+              My Wallet
+            </Link>
             <button type="button" className="primary-button" onClick={handleSignOut}>
               Sign out
             </button>

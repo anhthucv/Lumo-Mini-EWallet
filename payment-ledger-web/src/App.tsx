@@ -5,6 +5,7 @@ import ProtectedRoute from './auth/ProtectedRoute';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import WalletPage from './pages/WalletPage';
 
 function RootRedirect() {
   const { isAuthenticated } = useAuth();
@@ -20,6 +21,7 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/wallet" element={<WalletPage />} />
       </Route>
       <Route path="*" element={<RootRedirect />} />
     </Routes>
