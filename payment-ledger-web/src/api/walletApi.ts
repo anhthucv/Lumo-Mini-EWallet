@@ -16,3 +16,12 @@ export function deposit(amount: number, signal?: AbortSignal): Promise<DepositRe
     signal,
   });
 }
+
+export function withdraw(amount: number, signal?: AbortSignal): Promise<DepositResponse> {
+  const request: DepositRequest = { amount };
+  return requestJson<DepositResponse>('/wallet/withdraw', {
+    method: 'POST',
+    body: JSON.stringify(request),
+    signal,
+  });
+}

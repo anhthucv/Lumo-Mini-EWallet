@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError } from '../api/http';
-import { deposit, getMyWallet } from '../api/walletApi';
+import { deposit, getMyWallet, withdraw } from '../api/walletApi';
 import { useAuth } from '../auth/AuthContext';
 import type { DepositResponse, MyWalletResponse } from '../types/wallet';
 import './register.css';
@@ -42,6 +42,19 @@ function getDepositErrorMessage(error: unknown): string {
   return 'The server could not be reached. Please check your connection and try again.';
 }
 
+function getWithdrawErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.status === 400) {
+    return error.message || 'The withdrawal amount is not valid or exceeds the available balance.';
+  }
+  if (error instanceof ApiError && error.status === 404) {
+    return 'Your wallet could not be found. Please try again later.';
+  }
+  if (error instanceof ApiError) {
+    return 'The withdrawal could not be completed. Please try again.';
+  }
+  return 'The server could not be reached. Please check your connection and try again.';
+}
+
 function toWalletResponse(wallet: MyWalletResponse, response: DepositResponse): MyWalletResponse {
   return {
     ...wallet,
@@ -64,6 +77,10 @@ export default function WalletPage() {
   const [depositError, setDepositError] = useState<string | null>(null);
   const [depositSuccess, setDepositSuccess] = useState<string | null>(null);
   const [depositing, setDepositing] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
+  const [withdrawSuccess, setWithdrawSuccess] = useState<string | null>(null);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -132,6 +149,41 @@ export default function WalletPage() {
       setDepositError(getDepositErrorMessage(requestError));
     } finally {
       setDepositing(false);
+    }
+  }
+
+  async function handleWithdraw(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setWithdrawError(null);
+    setWithdrawSuccess(null);
+
+    const numericAmount = Number(withdrawAmount);
+    if (!withdrawAmount.trim() || !Number.isFinite(numericAmount) || numericAmount <= 0) {
+      setWithdrawError('Enter a valid amount greater than zero.');
+      return;
+    }
+    if (numericAmount < 1000) {
+      setWithdrawError('The minimum withdrawal is 1,000 VND.');
+      return;
+    }
+
+    setWithdrawing(true);
+    try {
+      const response = await withdraw(numericAmount);
+      setWallet((currentWallet) => currentWallet && toWalletResponse(currentWallet, response));
+      setWithdrawAmount('');
+      setWithdrawSuccess(
+        `Withdrew ${formatBalance(numericAmount)}. Updated balance: ${formatBalance(response.balance)}.`,
+      );
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        logout();
+        navigate('/login', { replace: true });
+        return;
+      }
+      setWithdrawError(getWithdrawErrorMessage(requestError));
+    } finally {
+      setWithdrawing(false);
     }
   }
 
@@ -228,6 +280,35 @@ export default function WalletPage() {
               {depositSuccess && <div className="banner success" role="status">{depositSuccess}</div>}
               <button type="submit" className="primary-button deposit-button" disabled={depositing}>
                 {depositing ? 'Processing deposit...' : 'Deposit funds'}
+              </button>
+            </form>
+            <form className="deposit-panel withdraw-panel" onSubmit={handleWithdraw} noValidate>
+              <div className="deposit-heading">
+                <div>
+                  <span className="deposit-kicker">Move money out</span>
+                  <h2>Withdraw from this wallet</h2>
+                </div>
+                <span className="deposit-minimum">Minimum 1,000 VND</span>
+              </div>
+              <label className="field-group" htmlFor="withdraw-amount">
+                <span className="field-label">Amount in VND</span>
+                <input
+                  id="withdraw-amount"
+                  className="input"
+                  type="number"
+                  inputMode="decimal"
+                  min="1000"
+                  step="1"
+                  value={withdrawAmount}
+                  onChange={(event) => setWithdrawAmount(event.target.value)}
+                  placeholder="100,000"
+                  disabled={withdrawing}
+                />
+              </label>
+              {withdrawError && <div className="banner error" role="alert">{withdrawError}</div>}
+              {withdrawSuccess && <div className="banner success" role="status">{withdrawSuccess}</div>}
+              <button type="submit" className="primary-button deposit-button" disabled={withdrawing}>
+                {withdrawing ? 'Processing withdrawal...' : 'Withdraw funds'}
               </button>
             </form>
           </div>
