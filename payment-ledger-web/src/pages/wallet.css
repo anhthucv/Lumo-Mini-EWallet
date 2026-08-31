@@ -73,6 +73,45 @@
   gap: 12px;
 }
 
+.deposit-panel {
+  display: grid;
+  gap: 16px;
+  padding: clamp(20px, 4vw, 30px);
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  border-radius: var(--radius-lg);
+  background: rgba(6, 13, 24, 0.56);
+}
+
+.deposit-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.deposit-kicker {
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.deposit-heading h2 {
+  margin: 4px 0 0;
+  font-size: 1.35rem;
+}
+
+.deposit-minimum {
+  color: var(--muted);
+  font-size: 0.86rem;
+  white-space: nowrap;
+}
+
+.deposit-button {
+  justify-self: start;
+}
+
 .wallet-state {
   display: flex;
   align-items: center;
@@ -116,5 +155,13 @@
 
   .wallet-details {
     grid-template-columns: 1fr;
+  }
+
+  .deposit-heading {
+    flex-direction: column;
+  }
+
+  .deposit-minimum {
+    white-space: normal;
   }
 }

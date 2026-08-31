@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError } from '../api/http';
-import { getMyWallet } from '../api/walletApi';
+import { deposit, getMyWallet } from '../api/walletApi';
 import { useAuth } from '../auth/AuthContext';
-import type { MyWalletResponse } from '../types/wallet';
+import type { DepositResponse, MyWalletResponse } from '../types/wallet';
 import './register.css';
 import './wallet.css';
 
@@ -29,6 +29,30 @@ function getErrorMessage(error: unknown): string {
   return 'The server could not be reached. Check your connection and try again.';
 }
 
+function getDepositErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.status === 400) {
+    return error.message || 'Enter a valid deposit amount of at least 1,000 VND.';
+  }
+  if (error instanceof ApiError && error.status === 404) {
+    return 'Your wallet could not be found. Please try again later.';
+  }
+  if (error instanceof ApiError) {
+    return 'The deposit could not be completed. Please try again.';
+  }
+  return 'The server could not be reached. Please check your connection and try again.';
+}
+
+function toWalletResponse(wallet: MyWalletResponse, response: DepositResponse): MyWalletResponse {
+  return {
+    ...wallet,
+    accountId: response.id,
+    accountNumber: response.accountNumber,
+    ownerName: response.ownerName,
+    balance: response.balance,
+    status: response.status,
+  };
+}
+
 export default function WalletPage() {
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -36,6 +60,10 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  const [amount, setAmount] = useState('');
+  const [depositError, setDepositError] = useState<string | null>(null);
+  const [depositSuccess, setDepositSuccess] = useState<string | null>(null);
+  const [depositing, setDepositing] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -71,6 +99,41 @@ export default function WalletPage() {
 
     return () => controller.abort();
   }, [logout, navigate, retryKey]);
+
+  async function handleDeposit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setDepositError(null);
+    setDepositSuccess(null);
+
+    const numericAmount = Number(amount);
+    if (!amount.trim() || !Number.isFinite(numericAmount) || numericAmount <= 0) {
+      setDepositError('Enter a valid amount greater than zero.');
+      return;
+    }
+    if (numericAmount < 1000) {
+      setDepositError('The minimum deposit is 1,000 VND.');
+      return;
+    }
+
+    setDepositing(true);
+    try {
+      const response = await deposit(numericAmount);
+      setWallet((currentWallet) => currentWallet && toWalletResponse(currentWallet, response));
+      setAmount('');
+      setDepositSuccess(
+        `Deposited ${formatBalance(numericAmount)}. Updated balance: ${formatBalance(response.balance)}.`,
+      );
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        logout();
+        navigate('/login', { replace: true });
+        return;
+      }
+      setDepositError(getDepositErrorMessage(requestError));
+    } finally {
+      setDepositing(false);
+    }
+  }
 
   return (
     <main className="register-shell wallet-shell">
@@ -138,7 +201,35 @@ export default function WalletPage() {
                 <strong>{wallet.accountId}</strong>
               </div>
             </div>
-            <div className="banner warning">Deposits, withdrawals, and transfers will be available in a later step.</div>
+            <form className="deposit-panel" onSubmit={handleDeposit} noValidate>
+              <div className="deposit-heading">
+                <div>
+                  <span className="deposit-kicker">Add funds</span>
+                  <h2>Deposit to this wallet</h2>
+                </div>
+                <span className="deposit-minimum">Minimum 1,000 VND</span>
+              </div>
+              <label className="field-group" htmlFor="deposit-amount">
+                <span className="field-label">Amount in VND</span>
+                <input
+                  id="deposit-amount"
+                  className="input"
+                  type="number"
+                  inputMode="decimal"
+                  min="1000"
+                  step="1"
+                  value={amount}
+                  onChange={(event) => setAmount(event.target.value)}
+                  placeholder="100,000"
+                  disabled={depositing}
+                />
+              </label>
+              {depositError && <div className="banner error" role="alert">{depositError}</div>}
+              {depositSuccess && <div className="banner success" role="status">{depositSuccess}</div>}
+              <button type="submit" className="primary-button deposit-button" disabled={depositing}>
+                {depositing ? 'Processing deposit...' : 'Deposit funds'}
+              </button>
+            </form>
           </div>
         )}
       </section>
