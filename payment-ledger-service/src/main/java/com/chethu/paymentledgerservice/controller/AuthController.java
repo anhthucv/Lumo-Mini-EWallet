@@ -19,6 +19,7 @@ import com.chethu.paymentledgerservice.service.RegistrationService;
 import jakarta.validation.Valid;
 
 @RestController
+@RequestMapping("/auth")
 public class AuthController {
     private final EmailVerificationService emailVerificationService;
     private final RegistrationService registrationService;

@@ -9,13 +9,20 @@ public class LoginResponse {
     private final String fullName;
     private final UserRole role;
     private final UserStatus status;
+    private final String accessToken;
+    private final String tokenType;
+    private final Long expiresIn;
 
-    public LoginResponse(Long userId, String email, String fullName, UserRole role, UserStatus status) {
+    public LoginResponse(Long userId, String email, String fullName, UserRole role, UserStatus status,
+            String accessToken, String tokenType, Long expiresIn) {
         this.userId = userId;
         this.email = email;
         this.fullName = fullName;
         this.role = role;
         this.status = status;
+        this.accessToken = accessToken;
+        this.tokenType = tokenType;
+        this.expiresIn = expiresIn;
     }
 
     public Long getUserId() {
@@ -36,5 +43,17 @@ public class LoginResponse {
 
     public UserStatus getStatus() {
         return status;
+    }
+
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    public String getTokenType() {
+        return tokenType;
+    }
+
+    public Long getExpiresIn() {
+        return expiresIn;
     }
 }

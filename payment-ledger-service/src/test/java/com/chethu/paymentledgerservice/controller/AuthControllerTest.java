@@ -206,9 +206,12 @@ public class AuthControllerTest {
                 "user@example.com",
                 "Nguyen Van A",
                 UserRole.USER,
-                UserStatus.ACTIVE);
+                UserStatus.ACTIVE,
+                "jwt-token",
+                "Bearer",
+                3600000L);
 
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
@@ -218,12 +221,14 @@ public class AuthControllerTest {
                         """))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Nguyen Van A")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("user@example.com")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("user@example.com")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("jwt-token")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Bearer")));
     }
 
     @Test
     void login_shouldReturnBadRequest_forBlankEmail() throws Exception {
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
@@ -237,7 +242,7 @@ public class AuthControllerTest {
 
     @Test
     void login_shouldReturnBadRequest_forInvalidEmail() throws Exception {
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
@@ -251,7 +256,7 @@ public class AuthControllerTest {
 
     @Test
     void login_shouldReturnBadRequest_forBlankPassword() throws Exception {
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
@@ -267,7 +272,7 @@ public class AuthControllerTest {
     void login_shouldReturnUnauthorized_forInvalidCredentials() throws Exception {
         loginService.throwable = new InvalidCredentialsException();
 
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
@@ -283,7 +288,7 @@ public class AuthControllerTest {
     void login_shouldReturnLocked_forLockedUser() throws Exception {
         loginService.throwable = new UserLockedException();
 
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
@@ -333,7 +338,7 @@ public class AuthControllerTest {
         private LoginResponse response;
 
         private StubLoginService() {
-            super(null, null);
+            super(null, null, null);
         }
 
         @Override

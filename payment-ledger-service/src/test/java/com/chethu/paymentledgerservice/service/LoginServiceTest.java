@@ -3,8 +3,10 @@ package com.chethu.paymentledgerservice.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,6 +30,7 @@ import com.chethu.paymentledgerservice.entity.UserEntity;
 import com.chethu.paymentledgerservice.exception.InvalidCredentialsException;
 import com.chethu.paymentledgerservice.exception.UserLockedException;
 import com.chethu.paymentledgerservice.repository.UserRepository;
+import com.chethu.paymentledgerservice.security.JwtService;
 
 @ExtendWith(MockitoExtension.class)
 class LoginServiceTest {
@@ -36,12 +39,14 @@ class LoginServiceTest {
     private UserRepository userRepository;
     @Mock
     private PasswordEncoder passwordEncoder;
+    @Mock
+    private JwtService jwtService;
 
     private LoginService loginService;
 
     @BeforeEach
     void setUp() {
-        loginService = new LoginService(userRepository, passwordEncoder);
+        loginService = new LoginService(userRepository, passwordEncoder, jwtService);
     }
 
     @Test
@@ -53,6 +58,7 @@ class LoginServiceTest {
 
         verify(userRepository).findByEmailIgnoreCase("user@example.com");
         verify(passwordEncoder, never()).matches(anyString(), anyString());
+        verifyNoInteractions(jwtService);
     }
 
     @Test
@@ -66,6 +72,7 @@ class LoginServiceTest {
 
         verify(userRepository).findByEmailIgnoreCase("user@example.com");
         verify(passwordEncoder).matches("wrong-password", "stored-hash");
+        verifyNoInteractions(jwtService);
     }
 
     @Test
@@ -79,6 +86,7 @@ class LoginServiceTest {
 
         verify(userRepository).findByEmailIgnoreCase("user@example.com");
         verify(passwordEncoder).matches("secret-password", "stored-hash");
+        verify(jwtService, never()).generateAccessToken(any(UserEntity.class));
     }
 
     @Test
@@ -86,6 +94,8 @@ class LoginServiceTest {
         UserEntity user = user(13L, "user@example.com", "stored-hash", UserStatus.ACTIVE);
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("secret-password", "stored-hash")).thenReturn(true);
+        when(jwtService.generateAccessToken(user)).thenReturn("jwt-token");
+        when(jwtService.getExpirationMs()).thenReturn(3600000L);
 
         LoginResponse response = loginService.login(loginRequest("user@example.com", "secret-password"));
 
@@ -94,11 +104,16 @@ class LoginServiceTest {
         assertEquals("Nguyen Van A", response.getFullName());
         assertEquals(UserRole.USER, response.getRole());
         assertEquals(UserStatus.ACTIVE, response.getStatus());
+        assertEquals("jwt-token", response.getAccessToken());
+        assertEquals("Bearer", response.getTokenType());
+        assertEquals(3600000L, response.getExpiresIn());
         assertPasswordHashNotExposed(response);
 
         verify(userRepository).findByEmailIgnoreCase("user@example.com");
         verify(passwordEncoder).matches("secret-password", "stored-hash");
         verify(passwordEncoder, never()).encode(anyString());
+        verify(jwtService).generateAccessToken(user);
+        verify(jwtService).getExpirationMs();
     }
 
     @Test
@@ -106,10 +121,13 @@ class LoginServiceTest {
         UserEntity user = user(14L, "user@example.com", "stored-hash", UserStatus.ACTIVE);
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("secret-password", "stored-hash")).thenReturn(true);
+        when(jwtService.generateAccessToken(user)).thenReturn("jwt-token");
+        when(jwtService.getExpirationMs()).thenReturn(3600000L);
 
         loginService.login(loginRequest("  USER@Example.com  ", "secret-password"));
 
         verify(userRepository).findByEmailIgnoreCase("user@example.com");
+        verify(jwtService).generateAccessToken(user);
     }
 
     private LoginRequest loginRequest(String email, String password) {
