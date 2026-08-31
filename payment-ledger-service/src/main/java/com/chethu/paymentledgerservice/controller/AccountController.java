@@ -55,12 +55,5 @@ public class AccountController {
     public ResponseEntity<Void> deleteAccount(@PathVariable Long id){
         accountService.deleteAccount(id);
         return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/{id}/withdraw")
-    public ResponseEntity<AccountResponse> withdraw(@PathVariable Long id, @Valid @RequestBody MoneyOperationRequest request) {
-        AccountResponse response = accountService.withdraw(id, request);
-        return ResponseEntity.ok(response);
-    }
-        
+    }   
 }

@@ -49,4 +49,16 @@ public class WalletController {
         AccountResponse response = accountService.depositForCurrentUser(principal.userId(), request);
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/withdraw")
+    public ResponseEntity<AccountResponse> withdraw(
+        @AuthenticationPrincipal AuthenticatedUserPrincipal principal, @Valid @RequestBody MoneyOperationRequest request
+    ){
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+        AccountResponse response = accountService.withdrawForCurrentUser(principal.userId(),request);
+        return ResponseEntity.ok(response);
+    }
+    
 }

@@ -106,8 +106,17 @@ public class AccountService {
     }
 
     @Transactional
-    public AccountResponse withdraw(Long id, MoneyOperationRequest request){
-        AccountEntity account = findAccountById(id);
+    public AccountResponse withdrawForCurrentUser(Long userId, MoneyOperationRequest request){
+        AccountEntity account = accountRepository.findByUserId(userId)
+        .orElseThrow(()->new AccountNotFoundException(userId));
+        return withdrawFromAccount(account,request);
+    }
+
+    private AccountResponse withdrawFromAccount(AccountEntity account, MoneyOperationRequest request){
+        if (request == null || request.getAmount() == null
+                || request.getAmount().compareTo(WalletRules.MINIMUM_OPERATION_AMOUNT) < 0) {
+            throw new IllegalArgumentException("Amount must be at least 1 VNĐ");
+        }
         account.withdraw(request.getAmount(), WalletRules.MINIMUM_BALANCE);
         AccountEntity updatedAccount = accountRepository.save(account);
         transactionService.recordTransaction(account, null, TransactionType.WITHDRAW, request.getAmount(), account.getBalance());
