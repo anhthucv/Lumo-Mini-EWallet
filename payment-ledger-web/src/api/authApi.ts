@@ -1,4 +1,6 @@
 import type {
+  LoginRequest,
+  LoginResponse,
   RegisterRequest,
   RegisterResponse,
   SendVerificationCodeRequest,
@@ -9,14 +11,21 @@ import { requestJson } from './http';
 export function sendRegistrationCode(
   payload: SendVerificationCodeRequest,
 ): Promise<VerificationCodeResponse> {
-  return requestJson<VerificationCodeResponse>('/api/auth/register/send-code', {
+  return requestJson<VerificationCodeResponse>('/auth/register/send-code', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 }
 
 export function registerUser(payload: RegisterRequest): Promise<RegisterResponse> {
-  return requestJson<RegisterResponse>('/api/auth/register', {
+  return requestJson<RegisterResponse>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function loginUser(payload: LoginRequest): Promise<LoginResponse> {
+  return requestJson<LoginResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify(payload),
   });

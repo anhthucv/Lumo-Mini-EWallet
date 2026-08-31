@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 
 import { registerUser, sendRegistrationCode } from '../api/authApi';
 import { ApiError } from '../api/http';
@@ -255,8 +256,8 @@ export default function RegisterPage() {
             <span className="hero-kicker">Secure wallet setup completed</span>
             <h1>Your account is ready.</h1>
             <p>
-              The wallet and user profile were created successfully. Login will be added in a later task, so for
-              now we keep you on this confirmation screen.
+              The wallet and user profile were created successfully. You can continue to the login page when you
+              are ready.
             </p>
           </aside>
 
@@ -299,7 +300,7 @@ export default function RegisterPage() {
               </div>
 
               <div className="banner success">
-                Registration complete. Login is not implemented yet, so no session was created.
+                Registration complete. You can continue to the login page when you are ready.
               </div>
 
               <div className="field-row">
@@ -307,6 +308,13 @@ export default function RegisterPage() {
                   Register another account
                 </button>
                 <div className="helper-text">You can reuse this page for another registration.</div>
+              </div>
+
+              <div className="auth-link-row">
+                <span>Already have an account?</span>
+                <Link className="auth-link" to="/login">
+                  Log in
+                </Link>
               </div>
             </div>
           </section>
@@ -491,7 +499,7 @@ export default function RegisterPage() {
             </div>
 
             <div className="footer-note">
-              Existing user? Login will be added in a later task.
+              Existing user? <Link className="auth-link" to="/login">Log in now</Link>.
             </div>
           </form>
         </section>

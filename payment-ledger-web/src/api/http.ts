@@ -1,4 +1,5 @@
 import type { ApiErrorResponse } from '../types/auth';
+import { getAuthHeaders } from '../auth/session';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -44,6 +45,7 @@ export async function requestJson<TResponse>(
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
+      ...getAuthHeaders(),
       ...(init.headers ?? {}),
     },
   });
@@ -80,3 +82,5 @@ export async function requestJson<TResponse>(
 
   return parseJson<TResponse>(rawBody) as TResponse;
 }
+
+export { getAuthHeaders };

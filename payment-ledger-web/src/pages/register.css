@@ -268,6 +268,12 @@
   border: 1px solid var(--border);
 }
 
+.secondary-button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .icon-button:hover:not(:disabled),
 .primary-button:hover:not(:disabled),
 .secondary-button:hover:not(:disabled) {
@@ -370,6 +376,39 @@
   color: var(--muted);
   font-size: 0.9rem;
   text-align: center;
+}
+
+.auth-link-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.auth-link {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+.session-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.session-token {
+  word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.86rem;
+  color: #cfe8ff;
 }
 
 @media (max-width: 920px) {
