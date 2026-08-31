@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -17,6 +18,7 @@ export interface AuthContextValue {
   tokenType: string | null;
   expiresIn: number | null;
   isAuthenticated: boolean;
+  isHydrating: boolean;
   login: (session: LoginResponse) => void;
   logout: () => void;
 }
@@ -62,22 +64,31 @@ function toStoredSession(response: LoginResponse): AuthSession {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [authState, setAuthState] = useState(() => normalizeSession(loadAuthSession()));
+  const [authState, setAuthState] = useState(() => normalizeSession(null));
+  const [isHydrating, setIsHydrating] = useState(true);
+
+  useEffect(() => {
+    setAuthState(normalizeSession(loadAuthSession()));
+    setIsHydrating(false);
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       ...authState,
+      isHydrating,
       login: (session: LoginResponse) => {
         const storedSession = toStoredSession(session);
         saveAuthSession(storedSession);
         setAuthState(normalizeSession(storedSession));
+        setIsHydrating(false);
       },
       logout: () => {
         clearAuthSession();
         setAuthState(normalizeSession(null));
+        setIsHydrating(false);
       },
     }),
-    [authState],
+    [authState, isHydrating],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

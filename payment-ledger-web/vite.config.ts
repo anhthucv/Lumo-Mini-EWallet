@@ -11,7 +11,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      '/wallet': {
+      '/wallet/me': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/wallet/deposit': {
         target: 'http://localhost:8080',
         changeOrigin: true,
         secure: false,

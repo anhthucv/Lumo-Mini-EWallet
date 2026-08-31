@@ -40,7 +40,7 @@ function mapBackendError(error: unknown): { field: FieldName | 'form'; message: 
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, isHydrating, login } = useAuth();
   const [form, setForm] = useState(initialForm);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [generalError, setGeneralError] = useState('');
@@ -50,10 +50,10 @@ export default function LoginPage() {
   const trimmedEmail = useMemo(() => normalizeEmail(form.email), [form.email]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!isHydrating && isAuthenticated) {
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isHydrating, navigate]);
 
   function setField<K extends FieldName>(field: K, value: string) {
     setForm((current) => ({ ...current, [field]: value }));

@@ -67,7 +67,7 @@ function mapBackendError(error: unknown): { field: FieldName | 'form'; message: 
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isHydrating } = useAuth();
   const [form, setForm] = useState(initialForm);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [generalError, setGeneralError] = useState('');
@@ -82,10 +82,10 @@ export default function RegisterPage() {
   const trimmedEmail = useMemo(() => normalizeEmail(form.email), [form.email]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!isHydrating && isAuthenticated) {
       navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isHydrating, navigate]);
 
   useEffect(() => {
     if (!otpRequestedFor) {

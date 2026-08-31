@@ -4,7 +4,15 @@ import { useAuth } from './AuthContext';
 
 export default function ProtectedRoute() {
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isHydrating } = useAuth();
+
+  if (isHydrating) {
+    return (
+      <div className="auth-loading" role="status" aria-live="polite">
+        Restoring your session...
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;

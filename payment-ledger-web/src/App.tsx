@@ -8,7 +8,15 @@ import RegisterPage from './pages/RegisterPage';
 import WalletPage from './pages/WalletPage';
 
 function RootRedirect() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isHydrating } = useAuth();
+
+  if (isHydrating) {
+    return (
+      <div className="auth-loading" role="status" aria-live="polite">
+        Restoring your session...
+      </div>
+    );
+  }
 
   return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
 }
