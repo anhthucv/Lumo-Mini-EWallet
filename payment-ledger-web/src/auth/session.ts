@@ -24,6 +24,21 @@ function parseJson<T>(value: string | null): T | null {
   }
 }
 
+function isAuthUser(value: unknown): value is AuthUser {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.userId === 'number' &&
+    typeof candidate.email === 'string' &&
+    typeof candidate.fullName === 'string' &&
+    typeof candidate.role === 'string' &&
+    typeof candidate.status === 'string'
+  );
+}
+
 export function saveAuthSession(session: AuthSession): void {
   const storage = readStorage();
   if (!storage) {
@@ -45,14 +60,16 @@ export function loadAuthSession(): AuthSession | null {
   const accessToken = storage.getItem(ACCESS_TOKEN_KEY);
   const tokenType = storage.getItem(TOKEN_TYPE_KEY) ?? 'Bearer';
   const expiresInRaw = storage.getItem(EXPIRES_IN_KEY);
-  const user = parseJson<AuthUser>(storage.getItem(USER_KEY));
+  const user = parseJson<unknown>(storage.getItem(USER_KEY));
 
-  if (!accessToken || !user || !expiresInRaw) {
+  if (!accessToken || !expiresInRaw || !isAuthUser(user)) {
+    clearAuthSession();
     return null;
   }
 
   const expiresIn = Number(expiresInRaw);
   if (Number.isNaN(expiresIn)) {
+    clearAuthSession();
     return null;
   }
 

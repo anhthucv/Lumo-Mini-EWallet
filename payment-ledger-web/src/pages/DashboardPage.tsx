@@ -1,18 +1,14 @@
-import { Navigate, Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
-import { clearAuthSession, loadAuthSession } from '../auth/session';
+import { useAuth } from '../auth/AuthContext';
 import './register.css';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const session = loadAuthSession();
-
-  if (!session) {
-    return <Navigate to="/login" replace />;
-  }
+  const { user, tokenType, expiresIn, logout } = useAuth();
 
   function handleSignOut() {
-    clearAuthSession();
+    logout();
     navigate('/login', { replace: true });
   }
 
@@ -28,7 +24,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <span className="hero-kicker">Signed in successfully</span>
-          <h1>Welcome back, {session.user.fullName}.</h1>
+          <h1>Welcome back, {user?.fullName}.</h1>
           <p>
             Your JWT session is stored locally and ready for the next authenticated screens in the project.
           </p>
@@ -61,27 +57,27 @@ export default function DashboardPage() {
             <div className="summary-grid">
               <div className="summary-item">
                 <span>Full name</span>
-                <strong>{session.user.fullName}</strong>
+                <strong>{user?.fullName}</strong>
               </div>
               <div className="summary-item">
                 <span>Email</span>
-                <strong>{session.user.email}</strong>
+                <strong>{user?.email}</strong>
               </div>
               <div className="summary-item">
                 <span>Role</span>
-                <strong>{session.user.role}</strong>
+                <strong>{user?.role}</strong>
               </div>
               <div className="summary-item">
                 <span>Status</span>
-                <strong>{session.user.status}</strong>
+                <strong>{user?.status}</strong>
               </div>
               <div className="summary-item">
                 <span>Token type</span>
-                <strong>{session.tokenType}</strong>
+                <strong>{tokenType}</strong>
               </div>
               <div className="summary-item">
                 <span>Expires in</span>
-                <strong>{Math.round(session.expiresIn / 1000 / 60)} minutes</strong>
+                <strong>{expiresIn ? `${Math.round(expiresIn / 1000 / 60)} minutes` : 'Unknown'}</strong>
               </div>
             </div>
           </div>

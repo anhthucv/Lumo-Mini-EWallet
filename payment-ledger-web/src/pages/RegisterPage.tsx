@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { registerUser, sendRegistrationCode } from '../api/authApi';
 import { ApiError } from '../api/http';
+import { useAuth } from '../auth/AuthContext';
 import type { RegisterRequest, RegisterResponse } from '../types/auth';
 import './register.css';
 
@@ -65,6 +66,8 @@ function mapBackendError(error: unknown): { field: FieldName | 'form'; message: 
 }
 
 export default function RegisterPage() {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [form, setForm] = useState(initialForm);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [generalError, setGeneralError] = useState('');
@@ -77,6 +80,12 @@ export default function RegisterPage() {
   const [registrationResult, setRegistrationResult] = useState<RegisterResponse | null>(null);
 
   const trimmedEmail = useMemo(() => normalizeEmail(form.email), [form.email]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   useEffect(() => {
     if (!otpRequestedFor) {

@@ -1,12 +1,15 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 
+import { useAuth } from './auth/AuthContext';
+import ProtectedRoute from './auth/ProtectedRoute';
 import DashboardPage from './pages/DashboardPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import { hasAuthSession } from './auth/session';
 
 function RootRedirect() {
-  return <Navigate to={hasAuthSession() ? '/dashboard' : '/login'} replace />;
+  const { isAuthenticated } = useAuth();
+
+  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
 }
 
 export default function App() {
@@ -15,7 +18,9 @@ export default function App() {
       <Route path="/" element={<RootRedirect />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/dashboard" element={<DashboardPage />} />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/dashboard" element={<DashboardPage />} />
+      </Route>
       <Route path="*" element={<RootRedirect />} />
     </Routes>
   );

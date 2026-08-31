@@ -3,8 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { loginUser } from '../api/authApi';
 import { ApiError } from '../api/http';
-import { saveAuthSession, loadAuthSession } from '../auth/session';
-import type { LoginRequest, LoginResponse } from '../types/auth';
+import { useAuth } from '../auth/AuthContext';
+import type { LoginRequest } from '../types/auth';
 import './register.css';
 
 type FieldName = 'email' | 'password';
@@ -40,20 +40,20 @@ function mapBackendError(error: unknown): { field: FieldName | 'form'; message: 
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { isAuthenticated, login } = useAuth();
   const [form, setForm] = useState(initialForm);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [generalError, setGeneralError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [sessionPreview, setSessionPreview] = useState<LoginResponse | null>(null);
 
   const trimmedEmail = useMemo(() => normalizeEmail(form.email), [form.email]);
 
   useEffect(() => {
-    if (loadAuthSession()) {
+    if (isAuthenticated) {
       navigate('/dashboard', { replace: true });
     }
-  }, [navigate]);
+  }, [isAuthenticated, navigate]);
 
   function setField<K extends FieldName>(field: K, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -83,7 +83,6 @@ export default function LoginPage() {
     }
 
     setGeneralError('');
-    setSessionPreview(null);
 
     if (!validateForm()) {
       return;
@@ -96,19 +95,7 @@ export default function LoginPage() {
         password: form.password,
       };
       const response = await loginUser(payload);
-      saveAuthSession({
-        accessToken: response.accessToken,
-        tokenType: response.tokenType,
-        expiresIn: response.expiresIn,
-        user: {
-          userId: response.userId,
-          email: response.email,
-          fullName: response.fullName,
-          role: response.role,
-          status: response.status,
-        },
-      });
-      setSessionPreview(response);
+      login(response);
       setForm(initialForm);
       setFieldErrors({});
       navigate('/dashboard', { replace: true });
@@ -221,15 +208,7 @@ export default function LoginPage() {
               <button type="submit" className="primary-button" disabled={loading}>
                 {loading ? 'Signing in...' : 'Login'}
               </button>
-              <div className="helper-text">
-                {sessionPreview ? (
-                  <>
-                    Signed in as <strong>{sessionPreview.fullName}</strong>
-                  </>
-                ) : (
-                  'Your JWT session will be stored locally after a successful sign-in.'
-                )}
-              </div>
+              <div className="helper-text">Your JWT session will be stored locally after a successful sign-in.</div>
             </div>
 
             <div className="auth-link-row">
