@@ -12,6 +12,7 @@ import com.chethu.paymentledgerservice.domain.WalletRules;
 import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.CreateAccountRequest;
 import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
+import com.chethu.paymentledgerservice.dto.MyWalletResponse;
 import com.chethu.paymentledgerservice.dto.UpdateAccountRequest;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
@@ -56,6 +57,12 @@ public class AccountService {
     public AccountResponse getAccountById(Long id){
         AccountEntity account = findAccountById(id);
         return toResponse(account);
+    }
+
+    public MyWalletResponse getMyWallet(Long userId) {
+        AccountEntity account = accountRepository.findByUserId(userId)
+                .orElseThrow(() -> new AccountNotFoundException(userId));
+        return MyWalletResponse.from(account);
     }
 
     public List<AccountResponse> getAllAccounts(){
