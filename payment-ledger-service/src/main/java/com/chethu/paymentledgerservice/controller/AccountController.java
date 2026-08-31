@@ -57,12 +57,6 @@ public class AccountController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{id}/deposit")
-    public ResponseEntity<AccountResponse> deposit(@PathVariable Long id, @Valid @RequestBody MoneyOperationRequest request) {
-        AccountResponse response = accountService.deposit(id, request);
-        return ResponseEntity.ok(response);
-    }
-
     @PostMapping("/{id}/withdraw")
     public ResponseEntity<AccountResponse> withdraw(@PathVariable Long id, @Valid @RequestBody MoneyOperationRequest request) {
         AccountResponse response = accountService.withdraw(id, request);

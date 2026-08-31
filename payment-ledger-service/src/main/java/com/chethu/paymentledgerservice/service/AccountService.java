@@ -88,8 +88,17 @@ public class AccountService {
     }
 
     @Transactional
-    public AccountResponse deposit(Long id, MoneyOperationRequest request){
-        AccountEntity account = findAccountById(id);
+    public AccountResponse depositForCurrentUser(Long userId, MoneyOperationRequest request) {
+        AccountEntity account = accountRepository.findByUserId(userId)
+                .orElseThrow(() -> new AccountNotFoundException(userId));
+        return depositToAccount(account, request);
+    }
+
+    private AccountResponse depositToAccount(AccountEntity account, MoneyOperationRequest request) {
+        if (request == null || request.getAmount() == null
+                || request.getAmount().compareTo(WalletRules.MINIMUM_OPERATION_AMOUNT) < 0) {
+            throw new IllegalArgumentException("Amount must be at least 1 VNĐ");
+        }
         account.deposit(request.getAmount());
         AccountEntity updatedAccount = accountRepository.save(account);
         transactionService.recordTransaction(account, null, TransactionType.DEPOSIT, request.getAmount(),account.getBalance());
