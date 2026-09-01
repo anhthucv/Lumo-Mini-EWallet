@@ -3,31 +3,22 @@ package com.chethu.paymentledgerservice.dto;
 import java.math.BigDecimal;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public class TransferRequest {
-    @NotNull (message = "Sender account id must not be null")
-    private Long fromAccountId;
-    @NotNull (message = "Receiver account id must not be null")
-    private Long toAccountId;
+    @NotBlank(message = "Recipient account number must not be blank")
+    private String recipientAccountNumber;
     @NotNull(message = "Amount must not be null")
     @DecimalMin (value="1.00",message="Amount must be at least 1 VNĐ")
     private BigDecimal amount;
-    
-    public Long getFromAccountId() {
-        return this.fromAccountId;
+
+    public String getRecipientAccountNumber() {
+        return this.recipientAccountNumber;
     }
 
-    public void setFromAccountId(Long fromAccountId) {
-        this.fromAccountId = fromAccountId;
-    }
-
-    public Long getToAccountId() {
-        return this.toAccountId;
-    }
-
-    public void setToAccountId(Long toAccountId) {
-        this.toAccountId = toAccountId;
+    public void setRecipientAccountNumber(String recipientAccountNumber) {
+        this.recipientAccountNumber = recipientAccountNumber;
     }
 
     public BigDecimal getAmount() {
@@ -37,6 +28,4 @@ public class TransferRequest {
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
-
-
 }

@@ -16,6 +16,7 @@ import com.chethu.paymentledgerservice.dto.MyWalletResponse;
 import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
 import com.chethu.paymentledgerservice.dto.RecipientResponse;
+import com.chethu.paymentledgerservice.dto.TransferRequest;
 import com.chethu.paymentledgerservice.security.AuthenticatedUserPrincipal;
 import com.chethu.paymentledgerservice.service.AccountService;
 
@@ -105,10 +106,45 @@ class WalletControllerTest {
         assertThrows(NoSuchMethodException.class, () -> RecipientResponse.class.getMethod("getUserId"));
     }
 
+    @Test
+    void transfer_shouldPassPrincipalUserIdAndRequestToService() {
+        StubAccountService service = new StubAccountService();
+        WalletController walletController = new WalletController(service);
+        AuthenticatedUserPrincipal principal = new AuthenticatedUserPrincipal(
+                42L, "user@example.com", "Sender", null, null);
+        TransferRequest request = new TransferRequest();
+        request.setRecipientAccountNumber("ACC-RECIPIENT");
+        request.setAmount(new BigDecimal("100000.00"));
+
+        AccountResponse response = walletController.transfer(principal, request).getBody();
+
+        assertNotNull(response);
+        assertEquals(42L, service.transferUserId);
+        assertEquals("ACC-RECIPIENT", service.transferRecipient);
+        assertEquals(new BigDecimal("100000.00"), service.transferAmount);
+    }
+
+    @Test
+    void transfer_shouldNotDeclareClientSenderIdentifiers() throws Exception {
+        Method method = WalletController.class.getMethod(
+                "transfer", AuthenticatedUserPrincipal.class, TransferRequest.class);
+
+        assertEquals(2, method.getParameterCount());
+        assertEquals(AuthenticatedUserPrincipal.class, method.getParameterTypes()[0]);
+        assertEquals(TransferRequest.class, method.getParameterTypes()[1]);
+        assertThrows(NoSuchMethodException.class,
+                () -> TransferRequest.class.getMethod("getFromAccountId"));
+        assertThrows(NoSuchMethodException.class,
+                () -> TransferRequest.class.getMethod("getToAccountId"));
+    }
+
     private static final class StubAccountService extends AccountService {
         private Long depositUserId;
         private BigDecimal depositAmount;
         private String recipientAccountNumber;
+        private Long transferUserId;
+        private String transferRecipient;
+        private BigDecimal transferAmount;
 
         StubAccountService() {
             super(null, null, null);
@@ -136,6 +172,14 @@ class WalletControllerTest {
         public RecipientResponse getRecipient(String accountNumber) {
             recipientAccountNumber = accountNumber;
             return new RecipientResponse(accountNumber, "Nguyen Van B");
+        }
+
+        @Override
+        public AccountResponse transferForCurrentUser(Long userId, TransferRequest request) {
+            transferUserId = userId;
+            transferRecipient = request.getRecipientAccountNumber();
+            transferAmount = request.getAmount();
+            return new AccountResponse(100L, "ACC-SENDER", "Sender", request.getAmount(), AccountStatus.ACTIVE);
         }
     }
 }

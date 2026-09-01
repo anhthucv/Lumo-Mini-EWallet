@@ -15,6 +15,7 @@ import com.chethu.paymentledgerservice.dto.MyWalletResponse;
 import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
 import com.chethu.paymentledgerservice.dto.RecipientResponse;
+import com.chethu.paymentledgerservice.dto.TransferRequest;
 import com.chethu.paymentledgerservice.security.AuthenticatedUserPrincipal;
 import com.chethu.paymentledgerservice.service.AccountService;
 
@@ -66,6 +67,18 @@ public class WalletController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
         }
         AccountResponse response = accountService.withdrawForCurrentUser(principal.userId(),request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/transfer")
+    public ResponseEntity<AccountResponse> transfer(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @Valid @RequestBody TransferRequest request) {
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+
+        AccountResponse response = accountService.transferForCurrentUser(principal.userId(), request);
         return ResponseEntity.ok(response);
     }
     

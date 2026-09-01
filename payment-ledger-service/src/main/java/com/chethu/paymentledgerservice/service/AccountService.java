@@ -14,10 +14,12 @@ import com.chethu.paymentledgerservice.dto.CreateAccountRequest;
 import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
 import com.chethu.paymentledgerservice.dto.MyWalletResponse;
 import com.chethu.paymentledgerservice.dto.RecipientResponse;
+import com.chethu.paymentledgerservice.dto.TransferRequest;
 import com.chethu.paymentledgerservice.dto.UpdateAccountRequest;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
 import com.chethu.paymentledgerservice.exception.InvalidAccountNumberException;
+import com.chethu.paymentledgerservice.exception.InvalidTransferException;
 import com.chethu.paymentledgerservice.repository.AccountRepository;
 
 @Service
@@ -109,7 +111,7 @@ public class AccountService {
     private AccountResponse depositToAccount(AccountEntity account, MoneyOperationRequest request) {
         if (request == null || request.getAmount() == null
                 || request.getAmount().compareTo(WalletRules.MINIMUM_OPERATION_AMOUNT) < 0) {
-            throw new IllegalArgumentException("Amount must be at least 1 VNĐ");
+            throw new IllegalArgumentException("Amount must be at least 1,000 VNĐ");
         }
         account.deposit(request.getAmount());
         AccountEntity updatedAccount = accountRepository.save(account);
@@ -127,12 +129,50 @@ public class AccountService {
     private AccountResponse withdrawFromAccount(AccountEntity account, MoneyOperationRequest request){
         if (request == null || request.getAmount() == null
                 || request.getAmount().compareTo(WalletRules.MINIMUM_OPERATION_AMOUNT) < 0) {
-            throw new IllegalArgumentException("Amount must be at least 1 VNĐ");
+            throw new IllegalArgumentException("Amount must be at least 1,000 VNĐ");
         }
         account.withdraw(request.getAmount(), WalletRules.MINIMUM_BALANCE);
         AccountEntity updatedAccount = accountRepository.save(account);
         transactionService.recordTransaction(account, null, TransactionType.WITHDRAW, request.getAmount(), account.getBalance());
         return toResponse(updatedAccount);
+    }
+
+    @Transactional
+    public AccountResponse transferForCurrentUser(Long userId, TransferRequest request) {
+        validateTransferRequest(request);
+        AccountEntity sender = accountRepository.findByUserId(userId)
+                .orElseThrow(() -> new AccountNotFoundException(userId));
+        AccountEntity recipient = accountRepository.findByAccountNumber(request.getRecipientAccountNumber())
+                .orElseThrow(() -> new AccountNotFoundException(request.getRecipientAccountNumber()));
+        return transferBetweenAccounts(sender, recipient, request);
+    }
+
+    private AccountResponse transferBetweenAccounts(AccountEntity sender, AccountEntity recipient,
+            TransferRequest request) {
+        if (sender == recipient || (sender.getId() != null && sender.getId().equals(recipient.getId()))) {
+            throw new InvalidTransferException("Sender and receiver account must be different");
+        }
+        sender.withdraw(request.getAmount(), WalletRules.MINIMUM_BALANCE);
+        recipient.deposit(request.getAmount());
+        AccountEntity updatedSender = accountRepository.save(sender);
+        accountRepository.save(recipient);
+
+        transactionService.recordTransaction(sender, recipient, TransactionType.TRANSFER_OUT,
+                request.getAmount(), sender.getBalance());
+        transactionService.recordTransaction(recipient, sender, TransactionType.TRANSFER_IN,
+                request.getAmount(), recipient.getBalance());
+        return toResponse(updatedSender);
+    }
+
+    private void validateTransferRequest(TransferRequest request) {
+        if (request == null || request.getRecipientAccountNumber() == null
+                || request.getRecipientAccountNumber().isBlank()) {
+            throw new InvalidTransferException("Recipient account number must not be blank");
+        }
+        if (request.getAmount() == null
+                || request.getAmount().compareTo(WalletRules.MINIMUM_OPERATION_AMOUNT) < 0) {
+            throw new InvalidTransferException("Amount must be at least 1 VNĐ");
+        }
     }
 
 }

@@ -21,6 +21,7 @@ import com.chethu.paymentledgerservice.dto.CreateAccountRequest;
 import com.chethu.paymentledgerservice.dto.MyWalletResponse;
 import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
 import com.chethu.paymentledgerservice.dto.RecipientResponse;
+import com.chethu.paymentledgerservice.dto.TransferRequest;
 import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
@@ -134,6 +135,105 @@ class AccountServiceTest {
     }
 
     @Test
+    void transferForCurrentUser_shouldMoveFundsAndRecordTwoTransferTransactions() {
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        TransactionService transactionService = mock(TransactionService.class);
+        AccountService service = new AccountService(accountRepository, transactionService,
+                mock(AccountNumberGenerator.class));
+        AccountEntity sender = account("ACC-SENDER", "Sender", 1L, "200000.00");
+        AccountEntity recipient = account("ACC-RECIPIENT", "Recipient", 2L, "0.00");
+        when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
+        when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+        when(accountRepository.save(any(AccountEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AccountResponse response = service.transferForCurrentUser(42L,
+                transferRequest("ACC-RECIPIENT", "100000.00"));
+
+        assertEquals(new BigDecimal("100000.00"), response.getBalance());
+        assertEquals(new BigDecimal("100000.00"), sender.getBalance());
+        assertEquals(new BigDecimal("100000.00"), recipient.getBalance());
+        verify(accountRepository).findByUserId(42L);
+        verify(accountRepository).findByAccountNumber("ACC-RECIPIENT");
+        verify(accountRepository).save(sender);
+        verify(accountRepository).save(recipient);
+        verify(transactionService).recordTransaction(sender, recipient, TransactionType.TRANSFER_OUT,
+                new BigDecimal("100000.00"), new BigDecimal("100000.00"));
+        verify(transactionService).recordTransaction(recipient, sender, TransactionType.TRANSFER_IN,
+                new BigDecimal("100000.00"), new BigDecimal("100000.00"));
+    }
+
+    @Test
+    void transferForCurrentUser_shouldAllowExactlyMinimumRemainingBalance() {
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        AccountService service = new AccountService(accountRepository, mock(TransactionService.class),
+                mock(AccountNumberGenerator.class));
+        AccountEntity sender = account("ACC-SENDER", "Sender", 1L, "100000.00");
+        AccountEntity recipient = account("ACC-RECIPIENT", "Recipient", 2L, "0.00");
+        when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
+        when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+        when(accountRepository.save(any(AccountEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "50000.00"));
+
+        assertEquals(new BigDecimal("50000.00"), sender.getBalance());
+    }
+
+    @Test
+    void transferForCurrentUser_shouldRejectBelowMinimumRemainingBalance() {
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        TransactionService transactionService = mock(TransactionService.class);
+        AccountService service = new AccountService(accountRepository, transactionService,
+                mock(AccountNumberGenerator.class));
+        AccountEntity sender = account("ACC-SENDER", "Sender", 1L, "100000.00");
+        AccountEntity recipient = account("ACC-RECIPIENT", "Recipient", 2L, "0.00");
+        when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
+        when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+
+        assertThrows(com.chethu.paymentledgerservice.exception.InsufficientBalanceException.class,
+                () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "60000.00")));
+        assertEquals(new BigDecimal("100000.00"), sender.getBalance());
+        verify(accountRepository, never()).save(any(AccountEntity.class));
+        verify(transactionService, never()).recordTransaction(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void transferForCurrentUser_shouldRejectSelfTransfer() {
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        AccountService service = new AccountService(accountRepository, mock(TransactionService.class),
+                mock(AccountNumberGenerator.class));
+        AccountEntity sender = account("ACC-SENDER", "Sender", 1L, "200000.00");
+        when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
+        when(accountRepository.findByAccountNumber("ACC-SENDER")).thenReturn(Optional.of(sender));
+
+        assertThrows(com.chethu.paymentledgerservice.exception.InvalidTransferException.class,
+                () -> service.transferForCurrentUser(42L, transferRequest("ACC-SENDER", "100000.00")));
+    }
+
+    @Test
+    void transferForCurrentUser_shouldRejectAmountBelowMinimum() {
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        AccountService service = new AccountService(accountRepository, mock(TransactionService.class),
+                mock(AccountNumberGenerator.class));
+
+        assertThrows(com.chethu.paymentledgerservice.exception.InvalidTransferException.class,
+                () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "999.99")));
+        verify(accountRepository, never()).findByUserId(any());
+    }
+
+    @Test
+    void transferForCurrentUser_shouldThrowWhenRecipientDoesNotExist() {
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        AccountService service = new AccountService(accountRepository, mock(TransactionService.class),
+                mock(AccountNumberGenerator.class));
+        AccountEntity sender = account("ACC-SENDER", "Sender", 1L, "200000.00");
+        when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
+        when(accountRepository.findByAccountNumber("ACC-MISSING")).thenReturn(Optional.empty());
+
+        assertThrows(AccountNotFoundException.class,
+                () -> service.transferForCurrentUser(42L, transferRequest("ACC-MISSING", "100000.00")));
+    }
+
+    @Test
     void depositForCurrentUser_shouldUpdateOwnWalletAndRecordDeposit() {
         AccountRepository accountRepository = mock(AccountRepository.class);
         TransactionService transactionService = mock(TransactionService.class);
@@ -187,6 +287,20 @@ class AccountServiceTest {
         MoneyOperationRequest request = new MoneyOperationRequest();
         request.setAmount(new BigDecimal(amount));
         return request;
+    }
+
+    private TransferRequest transferRequest(String recipientAccountNumber, String amount) {
+        TransferRequest request = new TransferRequest();
+        request.setRecipientAccountNumber(recipientAccountNumber);
+        request.setAmount(new BigDecimal(amount));
+        return request;
+    }
+
+    private AccountEntity account(String accountNumber, String ownerName, Long id, String balance) {
+        AccountEntity account = new AccountEntity(accountNumber, ownerName);
+        setId(account, id);
+        account.deposit(new BigDecimal(balance));
+        return account;
     }
 
     private void setId(AccountEntity account, Long id) {
