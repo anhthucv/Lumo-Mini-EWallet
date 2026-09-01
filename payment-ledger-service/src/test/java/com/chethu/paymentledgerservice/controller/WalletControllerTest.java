@@ -15,6 +15,7 @@ import com.chethu.paymentledgerservice.domain.AccountStatus;
 import com.chethu.paymentledgerservice.dto.MyWalletResponse;
 import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
+import com.chethu.paymentledgerservice.dto.RecipientResponse;
 import com.chethu.paymentledgerservice.security.AuthenticatedUserPrincipal;
 import com.chethu.paymentledgerservice.service.AccountService;
 
@@ -83,9 +84,31 @@ class WalletControllerTest {
         assertEquals(MoneyOperationRequest.class, method.getParameterTypes()[1]);
     }
 
+    @Test
+    void getRecipient_shouldDelegateAccountNumberToService() {
+        StubAccountService service = new StubAccountService();
+        WalletController walletController = new WalletController(service);
+
+        RecipientResponse response = walletController.getRecipient("ACC-123456789012").getBody();
+
+        assertNotNull(response);
+        assertEquals("ACC-123456789012", service.recipientAccountNumber);
+        assertEquals("ACC-123456789012", response.getAccountNumber());
+        assertEquals("Nguyen Van B", response.getOwnerName());
+    }
+
+    @Test
+    void getRecipient_shouldExposeOnlyAccountNumberAndOwnerName() throws Exception {
+        assertEquals(2, RecipientResponse.class.getDeclaredFields().length);
+        assertThrows(NoSuchMethodException.class, () -> RecipientResponse.class.getMethod("getId"));
+        assertThrows(NoSuchMethodException.class, () -> RecipientResponse.class.getMethod("getBalance"));
+        assertThrows(NoSuchMethodException.class, () -> RecipientResponse.class.getMethod("getUserId"));
+    }
+
     private static final class StubAccountService extends AccountService {
         private Long depositUserId;
         private BigDecimal depositAmount;
+        private String recipientAccountNumber;
 
         StubAccountService() {
             super(null, null, null);
@@ -107,6 +130,12 @@ class WalletControllerTest {
             depositAmount = request.getAmount();
             return new AccountResponse(100L, "ACC-123456789012", "Nguyen Van A",
                     request.getAmount(), AccountStatus.ACTIVE);
+        }
+
+        @Override
+        public RecipientResponse getRecipient(String accountNumber) {
+            recipientAccountNumber = accountNumber;
+            return new RecipientResponse(accountNumber, "Nguyen Van B");
         }
     }
 }

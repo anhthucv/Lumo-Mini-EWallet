@@ -8,5 +8,6 @@ import com.chethu.paymentledgerservice.entity.AccountEntity;
 
 public interface AccountRepository extends JpaRepository<AccountEntity,Long>{
     boolean existsByAccountNumber(String accountNumber);
+    Optional<AccountEntity> findByAccountNumber(String accountNumber);
     Optional<AccountEntity> findByUserId(Long userId);
 }

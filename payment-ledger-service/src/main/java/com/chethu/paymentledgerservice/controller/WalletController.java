@@ -8,11 +8,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.chethu.paymentledgerservice.dto.MyWalletResponse;
 import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
+import com.chethu.paymentledgerservice.dto.RecipientResponse;
 import com.chethu.paymentledgerservice.security.AuthenticatedUserPrincipal;
 import com.chethu.paymentledgerservice.service.AccountService;
 
@@ -35,6 +37,12 @@ public class WalletController {
         }
 
         MyWalletResponse response = accountService.getMyWallet(principal.userId());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/recipient")
+    public ResponseEntity<RecipientResponse> getRecipient(@RequestParam String accountNumber) {
+        RecipientResponse response = accountService.getRecipient(accountNumber);
         return ResponseEntity.ok(response);
     }
 

@@ -20,9 +20,11 @@ import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.CreateAccountRequest;
 import com.chethu.paymentledgerservice.dto.MyWalletResponse;
 import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
+import com.chethu.paymentledgerservice.dto.RecipientResponse;
 import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
+import com.chethu.paymentledgerservice.exception.InvalidAccountNumberException;
 import com.chethu.paymentledgerservice.repository.AccountRepository;
 
 class AccountServiceTest {
@@ -92,6 +94,43 @@ class AccountServiceTest {
         assertThrows(AccountNotFoundException.class, () -> service.getMyWallet(42L));
         verify(accountRepository).findByUserId(42L);
         verify(accountRepository, never()).save(any(AccountEntity.class));
+    }
+
+    @Test
+    void getRecipient_shouldFindByAccountNumberAndReturnSafeDetails() {
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        AccountService service = new AccountService(accountRepository, mock(TransactionService.class),
+                mock(AccountNumberGenerator.class));
+        AccountEntity account = new AccountEntity("ACC-123456789012", "Nguyen Van B");
+        when(accountRepository.findByAccountNumber("ACC-123456789012")).thenReturn(Optional.of(account));
+
+        RecipientResponse response = service.getRecipient("ACC-123456789012");
+
+        assertEquals("ACC-123456789012", response.getAccountNumber());
+        assertEquals("Nguyen Van B", response.getOwnerName());
+        verify(accountRepository).findByAccountNumber("ACC-123456789012");
+        verify(accountRepository, never()).save(any(AccountEntity.class));
+    }
+
+    @Test
+    void getRecipient_shouldThrowWhenAccountNumberDoesNotExist() {
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        AccountService service = new AccountService(accountRepository, mock(TransactionService.class),
+                mock(AccountNumberGenerator.class));
+        when(accountRepository.findByAccountNumber("ACC-MISSING")).thenReturn(Optional.empty());
+
+        assertThrows(AccountNotFoundException.class, () -> service.getRecipient("ACC-MISSING"));
+        verify(accountRepository).findByAccountNumber("ACC-MISSING");
+    }
+
+    @Test
+    void getRecipient_shouldRejectBlankAccountNumber() {
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        AccountService service = new AccountService(accountRepository, mock(TransactionService.class),
+                mock(AccountNumberGenerator.class));
+
+        assertThrows(InvalidAccountNumberException.class, () -> service.getRecipient("  "));
+        verify(accountRepository, never()).findByAccountNumber(any());
     }
 
     @Test
