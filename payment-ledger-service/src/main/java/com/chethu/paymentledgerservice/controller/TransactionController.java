@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -63,6 +64,16 @@ public class TransactionController {
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported transaction type");
         }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<TransactionResponse> getTransaction(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @PathVariable Long id) {
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+        return ResponseEntity.ok(transactionService.getTransactionForUser(principal.userId(), id));
     }
 
     private Sort parseSort(String sort) {

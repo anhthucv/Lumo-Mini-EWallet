@@ -45,4 +45,17 @@ class TransactionControllerTest {
                 String.class, java.time.LocalDate.class, java.time.LocalDate.class,
                 java.math.BigDecimal.class, java.math.BigDecimal.class).getParameterCount());
     }
+
+    @Test
+    void getTransaction_shouldPassPrincipalUserIdAndTransactionId() {
+        TransactionService service = mock(TransactionService.class);
+        TransactionController controller = new TransactionController(service);
+        AuthenticatedUserPrincipal principal = new AuthenticatedUserPrincipal(
+                42L, "user@example.com", "User", null, null);
+        TransactionResponse transaction = mock(TransactionResponse.class);
+        when(service.getTransactionForUser(42L, 7L)).thenReturn(transaction);
+
+        assertEquals(transaction, controller.getTransaction(principal, 7L).getBody());
+        verify(service).getTransactionForUser(42L, 7L);
+    }
 }

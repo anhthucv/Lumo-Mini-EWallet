@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError } from '../api/http';
-import { deposit, getMyWallet, getRecipient, getTransactions, transfer, withdraw } from '../api/walletApi';
+import { deposit, getMyWallet, getRecipient, getTransaction, getTransactions, transfer, withdraw } from '../api/walletApi';
 import { useAuth } from '../auth/AuthContext';
 import type {
   DepositResponse,
@@ -120,6 +120,16 @@ function getHistoryErrorMessage(error: unknown): string {
   return 'The server could not be reached. Please check your connection and try again.';
 }
 
+function getTransactionDetailErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.status === 404) {
+    return 'Transaction could not be found.';
+  }
+  if (error instanceof ApiError) {
+    return 'Transaction details could not be loaded. Please try again.';
+  }
+  return 'The server could not be reached. Please check your connection and try again.';
+}
+
 function validateTransactionFilters(filters: TransactionFilters): string | null {
   if (filters.fromDate && filters.toDate && filters.fromDate > filters.toDate) {
     return 'From date must be before or equal to To date.';
@@ -185,6 +195,10 @@ export default function WalletPage() {
   const [draftFilters, setDraftFilters] = useState<TransactionFilters>({});
   const [activeFilters, setActiveFilters] = useState<TransactionFilters>({});
   const [filterError, setFilterError] = useState<string | null>(null);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<number | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionResponse | null>(null);
+  const [transactionDetailLoading, setTransactionDetailLoading] = useState(false);
+  const [transactionDetailError, setTransactionDetailError] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -262,6 +276,45 @@ export default function WalletPage() {
 
     return () => controller.abort();
   }, [activeFilters, historyPage, historyRefreshKey, logout, navigate]);
+
+  useEffect(() => {
+    if (selectedTransactionId === null) {
+      setSelectedTransaction(null);
+      setTransactionDetailError(null);
+      return;
+    }
+    const transactionId = selectedTransactionId;
+
+    const controller = new AbortController();
+
+    async function loadTransactionDetail() {
+      setTransactionDetailLoading(true);
+      setSelectedTransaction(null);
+      setTransactionDetailError(null);
+
+      try {
+        setSelectedTransaction(await getTransaction(transactionId, controller.signal));
+      } catch (requestError) {
+        if (controller.signal.aborted) {
+          return;
+        }
+        if (requestError instanceof ApiError && requestError.status === 401) {
+          logout();
+          navigate('/login', { replace: true });
+          return;
+        }
+        setTransactionDetailError(getTransactionDetailErrorMessage(requestError));
+      } finally {
+        if (!controller.signal.aborted) {
+          setTransactionDetailLoading(false);
+        }
+      }
+    }
+
+    void loadTransactionDetail();
+
+    return () => controller.abort();
+  }, [logout, navigate, selectedTransactionId]);
 
   async function handleDeposit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -755,6 +808,13 @@ export default function WalletPage() {
                               ? 'This wallet'
                               : `Related account #${transaction.relatedAccountId}`}
                           </span>
+                          <button
+                            type="button"
+                            className="secondary-button transaction-detail-button"
+                            onClick={() => setSelectedTransactionId(transaction.id)}
+                          >
+                            View details
+                          </button>
                         </article>
                       );
                     })}
@@ -779,6 +839,43 @@ export default function WalletPage() {
                     </button>
                   </div>
                 </>
+              )}
+              {selectedTransactionId !== null && (
+                <section className="transaction-detail" aria-labelledby="transaction-detail-title">
+                  <div className="history-heading">
+                    <div>
+                      <span className="deposit-kicker">Transaction detail</span>
+                      <h3 id="transaction-detail-title">Transaction #{selectedTransactionId}</h3>
+                    </div>
+                    <button type="button" className="secondary-button" onClick={() => setSelectedTransactionId(null)}>
+                      Close
+                    </button>
+                  </div>
+                  {transactionDetailLoading && (
+                    <div className="history-state" role="status" aria-live="polite">
+                      <span className="loading-dot" aria-hidden="true" />
+                      Loading transaction details...
+                    </div>
+                  )}
+                  {!transactionDetailLoading && transactionDetailError && (
+                    <div className="history-state history-error" role="alert">{transactionDetailError}</div>
+                  )}
+                  {!transactionDetailLoading && !transactionDetailError && selectedTransaction && (
+                    <dl className="transaction-detail-grid">
+                      <div><dt>Transaction ID</dt><dd>{selectedTransaction.id}</dd></div>
+                      <div><dt>Type</dt><dd>{formatTransactionType(selectedTransaction.transactionType)}</dd></div>
+                      <div><dt>Amount</dt><dd>{formatBalance(selectedTransaction.amount)}</dd></div>
+                      <div><dt>Date</dt><dd>{formatTransactionDate(selectedTransaction.createdAt)}</dd></div>
+                      <div><dt>Balance after</dt><dd>{formatBalance(selectedTransaction.balanceAfterTransaction)}</dd></div>
+                      <div>
+                        <dt>Related account</dt>
+                        <dd>{selectedTransaction.relatedAccountId === null
+                          ? 'This wallet'
+                          : `Related account #${selectedTransaction.relatedAccountId}`}</dd>
+                      </div>
+                    </dl>
+                  )}
+                </section>
               )}
             </section>
           </div>

@@ -4,6 +4,7 @@ import type {
   MyWalletResponse,
   RecipientResponse,
   TransactionPageResponse,
+  TransactionResponse,
   TransactionFilters,
   TransferRequest,
   TransferResponse,
@@ -75,6 +76,13 @@ export function getTransactions({
     }
   });
   return requestJson<TransactionPageResponse>(`/transactions?${query.toString()}`, {
+    method: 'GET',
+    signal,
+  });
+}
+
+export function getTransaction(id: number, signal?: AbortSignal): Promise<TransactionResponse> {
+  return requestJson<TransactionResponse>(`/transactions/${id}`, {
     method: 'GET',
     signal,
   });

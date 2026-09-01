@@ -20,6 +20,7 @@ import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.entity.TransactionEntity;
 import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
 import com.chethu.paymentledgerservice.exception.InvalidTransactionFilterException;
+import com.chethu.paymentledgerservice.exception.TransactionNotFoundException;
 import com.chethu.paymentledgerservice.repository.AccountRepository;
 import com.chethu.paymentledgerservice.repository.TransactionRepository;
 
@@ -92,6 +93,14 @@ public class TransactionService {
         Page<TransactionEntity> transactions = transactionRepository.findAll(specification, pageable);
         Page<TransactionResponse> responses = transactions.map(this::toResponse);
         return responses;
+    }
+
+    public TransactionResponse getTransactionForUser(Long userId, Long transactionId) {
+        AccountEntity account = accountRepository.findByUserId(userId)
+                .orElseThrow(() -> new AccountNotFoundException(userId));
+        TransactionEntity transaction = transactionRepository.findByIdAndAccount(transactionId, account)
+                .orElseThrow(() -> new TransactionNotFoundException(transactionId));
+        return toResponse(transaction);
     }
 
     private void validateFilters(LocalDate fromDate, LocalDate toDate,

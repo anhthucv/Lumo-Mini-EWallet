@@ -16,6 +16,7 @@ import com.chethu.paymentledgerservice.dto.TransactionResponse;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.entity.TransactionEntity;
 import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
+import com.chethu.paymentledgerservice.exception.TransactionNotFoundException;
 import com.chethu.paymentledgerservice.repository.AccountRepository;
 import com.chethu.paymentledgerservice.repository.TransactionRepository;
 
@@ -84,6 +85,34 @@ public class TransactionServiceTest {
                         LocalDate.of(2026, 9, 2), LocalDate.of(2026, 9, 1),
                         new BigDecimal("10"), new BigDecimal("1"), PageRequest.of(0, 10)));
         org.mockito.Mockito.verifyNoInteractions(transactionRepository);
+    }
+
+    @Test
+    void getTransactionForUser_shouldResolveWalletAndMapOwnTransaction() {
+        AccountEntity account = new AccountEntity("ACC-Test", "Test user");
+        TransactionEntity transaction = new TransactionEntity(account, null, TransactionType.WITHDRAW,
+                new BigDecimal("100.00"), new BigDecimal("49900.00"));
+        when(accountRepository.findByUserId(42L)).thenReturn(java.util.Optional.of(account));
+        when(transactionRepository.findByIdAndAccount(7L, account)).thenReturn(java.util.Optional.of(transaction));
+
+        TransactionResponse response = transactionService.getTransactionForUser(42L, 7L);
+
+        assertEquals(TransactionType.WITHDRAW, response.getTransactionType());
+        assertEquals(new BigDecimal("100.00"), response.getAmount());
+        assertNull(response.getRelatedAccountId());
+        verify(accountRepository).findByUserId(42L);
+        verify(transactionRepository).findByIdAndAccount(7L, account);
+    }
+
+    @Test
+    void getTransactionForUser_shouldUseSameNotFoundResultForForeignOrMissingTransaction() {
+        AccountEntity account = new AccountEntity("ACC-Test", "Test user");
+        when(accountRepository.findByUserId(42L)).thenReturn(java.util.Optional.of(account));
+        when(transactionRepository.findByIdAndAccount(7L, account)).thenReturn(java.util.Optional.empty());
+
+        assertThrows(TransactionNotFoundException.class,
+                () -> transactionService.getTransactionForUser(42L, 7L));
+        verify(transactionRepository).findByIdAndAccount(7L, account);
     }
     
     @Test

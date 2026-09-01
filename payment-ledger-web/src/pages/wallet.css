@@ -167,6 +167,49 @@
   font-size: 0.86rem;
 }
 
+.transaction-detail-button {
+  flex-shrink: 0;
+}
+
+.transaction-detail {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(125, 211, 252, 0.24);
+  border-radius: 12px;
+  background: rgba(14, 24, 42, 0.72);
+}
+
+.transaction-detail h3 {
+  margin: 4px 0 0;
+  font-size: 1.2rem;
+}
+
+.transaction-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.transaction-detail-grid div {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.transaction-detail-grid dt {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.transaction-detail-grid dd {
+  margin: 0;
+  font-weight: 700;
+}
+
 .history-filters {
   display: grid;
   gap: 14px;
@@ -326,6 +369,10 @@
 
   .history-filter-actions {
     flex-direction: column;
+  }
+
+  .transaction-detail-grid {
+    grid-template-columns: 1fr;
   }
 
   .deposit-minimum {
