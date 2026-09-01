@@ -112,6 +112,31 @@
   justify-self: start;
 }
 
+.transfer-panel {
+  border-color: rgba(251, 191, 36, 0.24);
+}
+
+.transfer-lookup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.recipient-confirmation {
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px;
+  border: 1px solid rgba(52, 211, 153, 0.28);
+  border-radius: 12px;
+  background: rgba(52, 211, 153, 0.08);
+  color: var(--muted);
+}
+
+.recipient-confirmation strong {
+  color: var(--text);
+}
+
 .wallet-state {
   display: flex;
   align-items: center;
@@ -159,6 +184,10 @@
 
   .deposit-heading {
     flex-direction: column;
+  }
+
+  .transfer-lookup {
+    grid-template-columns: 1fr;
   }
 
   .deposit-minimum {

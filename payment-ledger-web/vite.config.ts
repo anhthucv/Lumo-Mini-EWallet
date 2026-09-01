@@ -26,6 +26,16 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/wallet/recipient': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/wallet/transfer': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 });
