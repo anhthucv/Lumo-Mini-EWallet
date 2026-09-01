@@ -212,15 +212,24 @@ public class AccountService {
         if (sender == recipient || (sender.getId() != null && sender.getId().equals(recipient.getId()))) {
             throw new InvalidTransferException("Sender and receiver account must be different");
         }
+        LedgerAccountEntity senderLedgerAccount = resolveWalletLedgerAccount(sender);
+        LedgerAccountEntity recipientLedgerAccount = resolveWalletLedgerAccount(recipient);
         sender.withdraw(request.getAmount(), WalletRules.MINIMUM_BALANCE);
         recipient.deposit(request.getAmount());
+        JournalEntity journal = new JournalEntity("TRANSFER-" + UUID.randomUUID());
+        new LedgerEntryEntity(journal, senderLedgerAccount, LedgerEntryType.DEBIT, request.getAmount());
+        new LedgerEntryEntity(journal, recipientLedgerAccount, LedgerEntryType.CREDIT, request.getAmount());
+        if (!journal.isBalanced()) {
+            throw new IllegalStateException("Transfer ledger journal is not balanced");
+        }
+        journalRepository.save(journal);
         AccountEntity updatedSender = accountRepository.save(sender);
         accountRepository.save(recipient);
 
         transactionService.recordTransaction(sender, recipient, TransactionType.TRANSFER_OUT,
-                request.getAmount(), sender.getBalance());
+                request.getAmount(), sender.getBalance(), journal);
         transactionService.recordTransaction(recipient, sender, TransactionType.TRANSFER_IN,
-                request.getAmount(), recipient.getBalance());
+                request.getAmount(), recipient.getBalance(), journal);
         return toResponse(updatedSender);
     }
 

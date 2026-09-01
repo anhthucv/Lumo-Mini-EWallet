@@ -166,10 +166,10 @@ class AccountServiceTest {
         verify(accountRepository).findByAccountNumber("ACC-RECIPIENT");
         verify(accountRepository).save(sender);
         verify(accountRepository).save(recipient);
-        verify(transactionService).recordTransaction(sender, recipient, TransactionType.TRANSFER_OUT,
-                new BigDecimal("100000.00"), new BigDecimal("100000.00"));
-        verify(transactionService).recordTransaction(recipient, sender, TransactionType.TRANSFER_IN,
-                new BigDecimal("100000.00"), new BigDecimal("100000.00"));
+        verify(transactionService).recordTransaction(eq(sender), eq(recipient), eq(TransactionType.TRANSFER_OUT),
+                eq(new BigDecimal("100000.00")), eq(new BigDecimal("100000.00")), any(JournalEntity.class));
+        verify(transactionService).recordTransaction(eq(recipient), eq(sender), eq(TransactionType.TRANSFER_IN),
+                eq(new BigDecimal("100000.00")), eq(new BigDecimal("100000.00")), any(JournalEntity.class));
     }
 
     @Test
