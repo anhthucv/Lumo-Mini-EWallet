@@ -74,6 +74,10 @@ public class UserEntity {
         return fullName;
     }
 
+    public void changeFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
     public UserRole getRole() {
         return role;
     }
