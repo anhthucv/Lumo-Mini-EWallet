@@ -137,6 +137,100 @@
   color: var(--text);
 }
 
+.history-panel {
+  display: grid;
+  gap: 18px;
+  padding: clamp(20px, 4vw, 30px);
+  border: 1px solid rgba(244, 114, 182, 0.2);
+  border-radius: var(--radius-lg);
+  background: rgba(6, 13, 24, 0.56);
+}
+
+.history-heading,
+.history-pagination,
+.transaction-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.history-heading h2 {
+  margin: 4px 0 0;
+  font-size: 1.35rem;
+}
+
+.history-count,
+.transaction-row small,
+.transaction-related {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.transaction-list {
+  display: grid;
+  gap: 10px;
+}
+
+.transaction-row {
+  align-items: flex-start;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.48);
+}
+
+.transaction-main,
+.transaction-values {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.transaction-main div,
+.transaction-values {
+  display: grid;
+  gap: 4px;
+}
+
+.transaction-direction {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.transaction-direction.incoming {
+  background: rgba(52, 211, 153, 0.14);
+  color: #6ee7b7;
+}
+
+.transaction-direction.outgoing {
+  background: rgba(251, 113, 133, 0.14);
+  color: #fda4af;
+}
+
+.incoming-text { color: #6ee7b7; }
+.outgoing-text { color: #fda4af; }
+
+.history-state {
+  display: flex;
+  min-height: 100px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.history-error {
+  flex-direction: column;
+  color: #fecdd3;
+}
+
 .wallet-state {
   display: flex;
   align-items: center;
@@ -188,6 +282,22 @@
 
   .transfer-lookup {
     grid-template-columns: 1fr;
+  }
+
+  .history-heading,
+  .history-pagination,
+  .transaction-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .history-pagination {
+    text-align: center;
+  }
+
+  .transaction-values,
+  .transaction-related {
+    margin-left: 44px;
   }
 
   .deposit-minimum {

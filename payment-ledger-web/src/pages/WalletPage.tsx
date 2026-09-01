@@ -2,9 +2,14 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError } from '../api/http';
-import { deposit, getMyWallet, getRecipient, transfer, withdraw } from '../api/walletApi';
+import { deposit, getMyWallet, getRecipient, getTransactions, transfer, withdraw } from '../api/walletApi';
 import { useAuth } from '../auth/AuthContext';
-import type { DepositResponse, MyWalletResponse, RecipientResponse } from '../types/wallet';
+import type {
+  DepositResponse,
+  MyWalletResponse,
+  RecipientResponse,
+  TransactionResponse,
+} from '../types/wallet';
 import './register.css';
 import './wallet.css';
 
@@ -17,6 +22,28 @@ const vndFormatter = new Intl.NumberFormat('vi-VN', {
 function formatBalance(balance: number | string): string {
   const numericBalance = typeof balance === 'number' ? balance : Number(balance);
   return Number.isFinite(numericBalance) ? vndFormatter.format(numericBalance) : 'Unavailable';
+}
+
+function formatTransactionType(type: TransactionResponse['transactionType']): string {
+  switch (type) {
+    case 'TRANSFER_IN':
+      return 'Transfer received';
+    case 'TRANSFER_OUT':
+      return 'Transfer sent';
+    case 'DEPOSIT':
+      return 'Deposit';
+    case 'WITHDRAW':
+      return 'Withdraw';
+    default:
+      return type;
+  }
+}
+
+function formatTransactionDate(createdAt: string): string {
+  const date = new Date(createdAt);
+  return Number.isNaN(date.getTime())
+    ? createdAt
+    : new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
 function getErrorMessage(error: unknown): string {
@@ -81,6 +108,16 @@ function getTransferErrorMessage(error: unknown): string {
   return 'The server could not be reached. Please check your connection and try again.';
 }
 
+function getHistoryErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.status === 403) {
+    return 'You do not have permission to view transaction history.';
+  }
+  if (error instanceof ApiError) {
+    return 'Transaction history could not be loaded. Please try again.';
+  }
+  return 'The server could not be reached. Please check your connection and try again.';
+}
+
 function toWalletResponse(wallet: MyWalletResponse, response: DepositResponse): MyWalletResponse {
   return {
     ...wallet,
@@ -115,6 +152,15 @@ export default function WalletPage() {
   const [transferError, setTransferError] = useState<string | null>(null);
   const [transferSuccess, setTransferSuccess] = useState<string | null>(null);
   const [transferring, setTransferring] = useState(false);
+  const [history, setHistory] = useState<TransactionResponse[]>([]);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historyTotalPages, setHistoryTotalPages] = useState(0);
+  const [historyTotalElements, setHistoryTotalElements] = useState(0);
+  const [historyFirst, setHistoryFirst] = useState(true);
+  const [historyLast, setHistoryLast] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -151,6 +197,42 @@ export default function WalletPage() {
     return () => controller.abort();
   }, [logout, navigate, retryKey]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadHistory() {
+      setHistoryLoading(true);
+      setHistoryError(null);
+
+      try {
+        const response = await getTransactions(historyPage, 10, 'createdAt,desc', controller.signal);
+        setHistory(response.content);
+        setHistoryTotalPages(response.totalPages);
+        setHistoryTotalElements(response.totalElements);
+        setHistoryFirst(response.first);
+        setHistoryLast(response.last);
+      } catch (requestError) {
+        if (controller.signal.aborted) {
+          return;
+        }
+        if (requestError instanceof ApiError && requestError.status === 401) {
+          logout();
+          navigate('/login', { replace: true });
+          return;
+        }
+        setHistoryError(getHistoryErrorMessage(requestError));
+      } finally {
+        if (!controller.signal.aborted) {
+          setHistoryLoading(false);
+        }
+      }
+    }
+
+    void loadHistory();
+
+    return () => controller.abort();
+  }, [historyPage, historyRefreshKey, logout, navigate]);
+
   async function handleDeposit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setDepositError(null);
@@ -174,6 +256,7 @@ export default function WalletPage() {
       setDepositSuccess(
         `Deposited ${formatBalance(numericAmount)}. Updated balance: ${formatBalance(response.balance)}.`,
       );
+      setHistoryRefreshKey((key) => key + 1);
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {
         logout();
@@ -209,6 +292,7 @@ export default function WalletPage() {
       setWithdrawSuccess(
         `Withdrew ${formatBalance(numericAmount)}. Updated balance: ${formatBalance(response.balance)}.`,
       );
+      setHistoryRefreshKey((key) => key + 1);
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {
         logout();
@@ -290,6 +374,7 @@ export default function WalletPage() {
       setTransferSuccess(
         `Transferred ${formatBalance(numericAmount)} to ${response.accountNumber}. Updated balance: ${formatBalance(response.balance)}.`,
       );
+      setHistoryRefreshKey((key) => key + 1);
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {
         logout();
@@ -484,6 +569,87 @@ export default function WalletPage() {
                   {transferring ? 'Processing transfer...' : 'Transfer funds'}
                 </button>
               </form>
+            </section>
+            <section className="history-panel" aria-labelledby="history-title">
+              <div className="history-heading">
+                <div>
+                  <span className="deposit-kicker">Ledger activity</span>
+                  <h2 id="history-title">Transaction history</h2>
+                </div>
+                <span className="history-count">
+                  {historyTotalElements} {historyTotalElements === 1 ? 'transaction' : 'transactions'}
+                </span>
+              </div>
+              {historyLoading && (
+                <div className="history-state" role="status" aria-live="polite">
+                  <span className="loading-dot" aria-hidden="true" />
+                  Loading transaction history...
+                </div>
+              )}
+              {!historyLoading && historyError && (
+                <div className="history-state history-error" role="alert">
+                  <span>{historyError}</span>
+                  <button type="button" className="secondary-button" onClick={() => setHistoryRefreshKey((key) => key + 1)}>
+                    Try again
+                  </button>
+                </div>
+              )}
+              {!historyLoading && !historyError && history.length === 0 && (
+                <div className="history-state" role="status">No transactions yet.</div>
+              )}
+              {!historyLoading && !historyError && history.length > 0 && (
+                <>
+                  <div className="transaction-list" role="list" aria-label="Transaction history">
+                    {history.map((transaction) => {
+                      const incoming = transaction.transactionType === 'DEPOSIT'
+                        || transaction.transactionType === 'TRANSFER_IN';
+                      return (
+                        <article className="transaction-row" role="listitem" key={transaction.id}>
+                          <div className="transaction-main">
+                            <span className={`transaction-direction ${incoming ? 'incoming' : 'outgoing'}`}>
+                              {incoming ? '+' : '-'}
+                            </span>
+                            <div>
+                              <strong>{formatTransactionType(transaction.transactionType)}</strong>
+                              <small>{formatTransactionDate(transaction.createdAt)}</small>
+                            </div>
+                          </div>
+                          <div className="transaction-values">
+                            <strong className={incoming ? 'incoming-text' : 'outgoing-text'}>
+                              {incoming ? '+' : '-'}{formatBalance(transaction.amount)}
+                            </strong>
+                            <small>Balance after: {formatBalance(transaction.balanceAfterTransaction)}</small>
+                          </div>
+                          <span className="transaction-related">
+                            {transaction.relatedAccountId === null
+                              ? 'This wallet'
+                              : `Related account #${transaction.relatedAccountId}`}
+                          </span>
+                        </article>
+                      );
+                    })}
+                  </div>
+                  <div className="history-pagination" aria-label="Transaction history pagination">
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      disabled={historyFirst || historyPage === 0 || historyLoading}
+                      onClick={() => setHistoryPage((page) => Math.max(0, page - 1))}
+                    >
+                      Previous
+                    </button>
+                    <span>Page {historyPage + 1} of {Math.max(historyTotalPages, 1)}</span>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      disabled={historyLast || historyLoading || historyPage + 1 >= historyTotalPages}
+                      onClick={() => setHistoryPage((page) => page + 1)}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </>
+              )}
             </section>
           </div>
         )}

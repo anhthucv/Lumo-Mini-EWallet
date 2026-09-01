@@ -29,3 +29,25 @@ export interface TransferRequest {
 }
 
 export type TransferResponse = DepositResponse;
+
+export type TransactionType = 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER_IN' | 'TRANSFER_OUT';
+
+export interface TransactionResponse {
+  id: number;
+  accountId: number;
+  relatedAccountId: number | null;
+  transactionType: TransactionType;
+  amount: number | string;
+  balanceAfterTransaction: number | string;
+  createdAt: string;
+}
+
+export interface TransactionPageResponse {
+  content: TransactionResponse[];
+  number: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+}
