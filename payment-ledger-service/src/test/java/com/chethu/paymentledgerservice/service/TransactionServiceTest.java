@@ -21,7 +21,6 @@ import com.chethu.paymentledgerservice.repository.TransactionRepository;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
@@ -39,29 +38,27 @@ public class TransactionServiceTest {
     private TransactionService transactionService;
 
     @Test
-    void getHistoryByAccount_shouldThrowException_whenAccountNotFound(){
-        Long accountId = 999L;
+    void getHistoryForUser_shouldThrowException_whenWalletNotFound(){
+        Long userId = 999L;
         Pageable pageable = PageRequest.of(0,5);
-        when (accountRepository.existsById(accountId)).thenReturn(false);
+        when (accountRepository.findByUserId(userId)).thenReturn(java.util.Optional.empty());
         
-        assertThrows(AccountNotFoundException.class, () -> transactionService.getHistoryByAccount(accountId, pageable));
-
-        verify(transactionRepository,never()).getHistoryByAccount(accountId, pageable);
+        assertThrows(AccountNotFoundException.class, () -> transactionService.getHistoryForUser(userId, pageable));
     }
 
     @Test 
-    void getHistoryByAccount_shouldReturnHistory_whenAccountExists(){
-        Long accountId = 1L;
+    void getHistoryForUser_shouldReturnHistoryForResolvedWallet(){
+        Long userId = 42L;
         Pageable pageable = PageRequest.of(0,5);
-        when (accountRepository.existsById(accountId)).thenReturn(true);
 
         AccountEntity account = new AccountEntity("ACC-Test","Test user");
+        when(accountRepository.findByUserId(userId)).thenReturn(java.util.Optional.of(account));
         TransactionEntity transaction = new TransactionEntity(account,null, TransactionType.DEPOSIT,new BigDecimal("50000.00"),new BigDecimal("50000.00"));
 
         Page<TransactionEntity> transactionPage = new PageImpl<>(List.of(transaction));
-        when (transactionRepository.getHistoryByAccount(accountId, pageable)).thenReturn(transactionPage);
+        when (transactionRepository.findByAccount(account, pageable)).thenReturn(transactionPage);
 
-        Page<TransactionResponse>  result = transactionService.getHistoryByAccount(accountId, pageable);
+        Page<TransactionResponse>  result = transactionService.getHistoryForUser(userId, pageable);
 
         assertEquals(1, result.getTotalElements());
         TransactionResponse response = result.getContent().get(0);
@@ -69,7 +66,8 @@ public class TransactionServiceTest {
         assertNull( response.getRelatedAccountId());
         assertEquals(new BigDecimal("50000.00"), response.getAmount());   
         assertEquals(new BigDecimal("50000.00"), response.getBalanceAfterTransaction());           
-        verify(transactionRepository).getHistoryByAccount(accountId, pageable);
+        verify(accountRepository).findByUserId(userId);
+        verify(transactionRepository).findByAccount(account, pageable);
     } 
     
     @Test

@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.dto.TransactionResponse;
@@ -49,13 +50,14 @@ public class TransactionService {
         );
     }
 
-    public Page<TransactionResponse> getHistoryByAccount(Long accountId, Pageable pageable){
-        if (!accountRepository.existsById(accountId)){
-            log.warn("Transaction history requested for non-exist account with id accountId={}",accountId);
-            throw new AccountNotFoundException(accountId);
-        } 
-        log.info("Fetching transaction history for account: accountId={}",accountId);
-        Page<TransactionEntity> transactions = transactionRepository.getHistoryByAccount(accountId, pageable);
+    public Page<TransactionResponse> getHistoryForUser(Long userId, Pageable pageable){
+        AccountEntity account = accountRepository.findByUserId(userId)
+                .orElseThrow(() -> {
+                    log.warn("Transaction history requested without an account for userId={}", userId);
+                    return new AccountNotFoundException(userId);
+                });
+        log.info("Fetching transaction history for authenticated account: accountId={}", account.getId());
+        Page<TransactionEntity> transactions = transactionRepository.findByAccount(account, pageable);
         Page<TransactionResponse> responses = transactions.map(this::toResponse);
         return responses;
     }
