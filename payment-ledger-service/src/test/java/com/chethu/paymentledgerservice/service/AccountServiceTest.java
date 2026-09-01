@@ -25,6 +25,8 @@ import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
 import com.chethu.paymentledgerservice.dto.RecipientResponse;
 import com.chethu.paymentledgerservice.dto.TransferRequest;
 import com.chethu.paymentledgerservice.domain.AccountStatus;
+import com.chethu.paymentledgerservice.domain.AccountClass;
+import com.chethu.paymentledgerservice.domain.LedgerAccountType;
 import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.entity.JournalEntity;
@@ -334,8 +336,8 @@ class AccountServiceTest {
         AccountResponse response = service.withdrawForCurrentUser(42L, moneyRequest("100000.00"));
 
         assertEquals(new BigDecimal("100000.00"), response.getBalance());
-        verify(transactionService).recordTransaction(account, null, TransactionType.WITHDRAW,
-                new BigDecimal("100000.00"), new BigDecimal("100000.00"));
+        verify(transactionService).recordTransaction(eq(account), isNull(), eq(TransactionType.WITHDRAW),
+                eq(new BigDecimal("100000.00")), eq(new BigDecimal("100000.00")), any(JournalEntity.class));
     }
 
     @Test
@@ -437,8 +439,19 @@ class AccountServiceTest {
 
     private AccountService service(AccountRepository accountRepository, TransactionService transactionService,
             AccountNumberGenerator accountNumberGenerator) {
+        LedgerAccountRepository ledgerAccountRepository = mock(LedgerAccountRepository.class);
+        JournalRepository journalRepository = mock(JournalRepository.class);
+        when(ledgerAccountRepository.findByWalletAccount(any(AccountEntity.class))).thenAnswer(invocation -> {
+            AccountEntity account = invocation.getArgument(0);
+            return Optional.of(new LedgerAccountEntity("WALLET-" + account.getAccountNumber(),
+                    LedgerAccountType.WALLET, AccountClass.LIABILITY, account));
+        });
+        when(ledgerAccountRepository.findByCode("SYSTEM_CLEARING")).thenReturn(Optional.of(
+                new LedgerAccountEntity("SYSTEM_CLEARING", LedgerAccountType.SYSTEM_CLEARING,
+                        AccountClass.ASSET, null)));
+        when(journalRepository.save(any(JournalEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         return new AccountService(accountRepository, transactionService, accountNumberGenerator,
-                mock(LedgerAccountRepository.class), mock(JournalRepository.class));
+                ledgerAccountRepository, journalRepository);
     }
 
     private TransferRequest transferRequest(String recipientAccountNumber, String amount) {

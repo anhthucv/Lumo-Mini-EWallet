@@ -171,11 +171,21 @@ public class AccountService {
     private AccountResponse withdrawFromAccount(AccountEntity account, MoneyOperationRequest request){
         if (request == null || request.getAmount() == null
                 || request.getAmount().compareTo(WalletRules.MINIMUM_OPERATION_AMOUNT) < 0) {
-            throw new IllegalArgumentException("Amount must be at least 1,000 VNĐ");
+            throw new IllegalArgumentException("Amount must be at least 1 VNĐ");
         }
+        LedgerAccountEntity walletLedgerAccount = resolveWalletLedgerAccount(account);
+        LedgerAccountEntity systemClearingAccount = resolveSystemClearingAccount();
         account.withdraw(request.getAmount(), WalletRules.MINIMUM_BALANCE);
+        JournalEntity journal = new JournalEntity("WITHDRAW-" + UUID.randomUUID());
+        new LedgerEntryEntity(journal, walletLedgerAccount, LedgerEntryType.DEBIT, request.getAmount());
+        new LedgerEntryEntity(journal, systemClearingAccount, LedgerEntryType.CREDIT, request.getAmount());
+        if (!journal.isBalanced()) {
+            throw new IllegalStateException("Withdraw ledger journal is not balanced");
+        }
+        journalRepository.save(journal);
         AccountEntity updatedAccount = accountRepository.save(account);
-        transactionService.recordTransaction(account, null, TransactionType.WITHDRAW, request.getAmount(), account.getBalance());
+        transactionService.recordTransaction(account, null, TransactionType.WITHDRAW, request.getAmount(),
+                account.getBalance(), journal);
         return toResponse(updatedAccount);
     }
 
