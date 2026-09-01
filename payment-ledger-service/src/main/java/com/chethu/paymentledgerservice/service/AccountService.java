@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.domain.WalletRules;
+import com.chethu.paymentledgerservice.domain.AccountStatus;
 import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.CreateAccountRequest;
 import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
@@ -18,6 +19,7 @@ import com.chethu.paymentledgerservice.dto.TransferRequest;
 import com.chethu.paymentledgerservice.dto.UpdateAccountRequest;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
+import com.chethu.paymentledgerservice.exception.AccountNotActiveException;
 import com.chethu.paymentledgerservice.exception.InvalidAccountNumberException;
 import com.chethu.paymentledgerservice.exception.InvalidTransferException;
 import com.chethu.paymentledgerservice.repository.AccountRepository;
@@ -105,6 +107,7 @@ public class AccountService {
     public AccountResponse depositForCurrentUser(Long userId, MoneyOperationRequest request) {
         AccountEntity account = accountRepository.findByUserId(userId)
                 .orElseThrow(() -> new AccountNotFoundException(userId));
+        ensureAccountActive(account);
         return depositToAccount(account, request);
     }
 
@@ -123,6 +126,7 @@ public class AccountService {
     public AccountResponse withdrawForCurrentUser(Long userId, MoneyOperationRequest request){
         AccountEntity account = accountRepository.findByUserId(userId)
         .orElseThrow(()->new AccountNotFoundException(userId));
+        ensureAccountActive(account);
         return withdrawFromAccount(account,request);
     }
 
@@ -144,7 +148,15 @@ public class AccountService {
                 .orElseThrow(() -> new AccountNotFoundException(userId));
         AccountEntity recipient = accountRepository.findByAccountNumber(request.getRecipientAccountNumber())
                 .orElseThrow(() -> new AccountNotFoundException(request.getRecipientAccountNumber()));
+        ensureAccountActive(sender);
+        ensureAccountActive(recipient);
         return transferBetweenAccounts(sender, recipient, request);
+    }
+
+    private void ensureAccountActive(AccountEntity account) {
+        if (account.getStatus() != AccountStatus.ACTIVE) {
+            throw new AccountNotActiveException();
+        }
     }
 
     private AccountResponse transferBetweenAccounts(AccountEntity sender, AccountEntity recipient,

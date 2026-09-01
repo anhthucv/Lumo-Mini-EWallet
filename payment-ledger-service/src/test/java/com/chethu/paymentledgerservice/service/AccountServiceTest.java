@@ -22,8 +22,10 @@ import com.chethu.paymentledgerservice.dto.MyWalletResponse;
 import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
 import com.chethu.paymentledgerservice.dto.RecipientResponse;
 import com.chethu.paymentledgerservice.dto.TransferRequest;
+import com.chethu.paymentledgerservice.domain.AccountStatus;
 import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
+import com.chethu.paymentledgerservice.exception.AccountNotActiveException;
 import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
 import com.chethu.paymentledgerservice.exception.InvalidAccountNumberException;
 import com.chethu.paymentledgerservice.repository.AccountRepository;
@@ -271,6 +273,135 @@ class AccountServiceTest {
     }
 
     @Test
+    void depositForCurrentUser_shouldRejectFrozenWalletBeforeMutation() {
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        TransactionService transactionService = mock(TransactionService.class);
+        AccountService service = new AccountService(accountRepository, transactionService,
+                mock(AccountNumberGenerator.class));
+        AccountEntity account = account("ACC-FROZEN", "Nguyen Van A", 77L, "100000.00");
+        setStatus(account, AccountStatus.FROZEN);
+        when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+
+        assertThrows(AccountNotActiveException.class,
+                () -> service.depositForCurrentUser(42L, moneyRequest("100000.00")));
+        assertEquals(new BigDecimal("100000.00"), account.getBalance());
+        verify(accountRepository, never()).save(any(AccountEntity.class));
+        verify(transactionService, never()).recordTransaction(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void depositForCurrentUser_shouldRejectClosedWalletBeforeMutation() {
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        TransactionService transactionService = mock(TransactionService.class);
+        AccountService service = new AccountService(accountRepository, transactionService,
+                mock(AccountNumberGenerator.class));
+        AccountEntity account = account("ACC-CLOSED", "Nguyen Van A", 77L, "100000.00");
+        setStatus(account, AccountStatus.CLOSED);
+        when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+
+        assertThrows(AccountNotActiveException.class,
+                () -> service.depositForCurrentUser(42L, moneyRequest("100000.00")));
+        assertEquals(new BigDecimal("100000.00"), account.getBalance());
+        verify(accountRepository, never()).save(any(AccountEntity.class));
+        verify(transactionService, never()).recordTransaction(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void withdrawForCurrentUser_shouldAllowActiveWalletAndRecordLedger() {
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        TransactionService transactionService = mock(TransactionService.class);
+        AccountService service = new AccountService(accountRepository, transactionService,
+                mock(AccountNumberGenerator.class));
+        AccountEntity account = account("ACC-ACTIVE", "Nguyen Van A", 77L, "200000.00");
+        when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(accountRepository.save(account)).thenReturn(account);
+
+        AccountResponse response = service.withdrawForCurrentUser(42L, moneyRequest("100000.00"));
+
+        assertEquals(new BigDecimal("100000.00"), response.getBalance());
+        verify(transactionService).recordTransaction(account, null, TransactionType.WITHDRAW,
+                new BigDecimal("100000.00"), new BigDecimal("100000.00"));
+    }
+
+    @Test
+    void withdrawForCurrentUser_shouldRejectFrozenWalletWithoutMutation() {
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        TransactionService transactionService = mock(TransactionService.class);
+        AccountService service = new AccountService(accountRepository, transactionService,
+                mock(AccountNumberGenerator.class));
+        AccountEntity account = account("ACC-FROZEN", "Nguyen Van A", 77L, "200000.00");
+        setStatus(account, AccountStatus.FROZEN);
+        when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+
+        assertThrows(AccountNotActiveException.class,
+                () -> service.withdrawForCurrentUser(42L, moneyRequest("100000.00")));
+        assertEquals(new BigDecimal("200000.00"), account.getBalance());
+        verify(accountRepository, never()).save(any(AccountEntity.class));
+        verify(transactionService, never()).recordTransaction(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void withdrawForCurrentUser_shouldRejectClosedWalletWithoutMutation() {
+        AccountRepository accountRepository = mock(AccountRepository.class);
+        TransactionService transactionService = mock(TransactionService.class);
+        AccountService service = new AccountService(accountRepository, transactionService,
+                mock(AccountNumberGenerator.class));
+        AccountEntity account = account("ACC-CLOSED", "Nguyen Van A", 77L, "200000.00");
+        setStatus(account, AccountStatus.CLOSED);
+        when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+
+        assertThrows(AccountNotActiveException.class,
+                () -> service.withdrawForCurrentUser(42L, moneyRequest("100000.00")));
+        assertEquals(new BigDecimal("200000.00"), account.getBalance());
+        verify(accountRepository, never()).save(any(AccountEntity.class));
+        verify(transactionService, never()).recordTransaction(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void transferForCurrentUser_shouldRejectInactiveSenderAndRecipientWithoutMutation() {
+        for (AccountStatus inactiveStatus : new AccountStatus[] { AccountStatus.FROZEN, AccountStatus.CLOSED }) {
+            AccountRepository accountRepository = mock(AccountRepository.class);
+            TransactionService transactionService = mock(TransactionService.class);
+            AccountService service = new AccountService(accountRepository, transactionService,
+                    mock(AccountNumberGenerator.class));
+            AccountEntity sender = account("ACC-SENDER", "Sender", 1L, "200000.00");
+            AccountEntity recipient = account("ACC-RECIPIENT", "Recipient", 2L, "0.00");
+            setStatus(sender, inactiveStatus);
+            when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
+            when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+
+            assertThrows(AccountNotActiveException.class,
+                    () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "100000.00")));
+            assertEquals(new BigDecimal("200000.00"), sender.getBalance());
+            assertEquals(new BigDecimal("0.00"), recipient.getBalance());
+            verify(accountRepository, never()).save(any(AccountEntity.class));
+            verify(transactionService, never()).recordTransaction(any(), any(), any(), any(), any());
+        }
+    }
+
+    @Test
+    void transferForCurrentUser_shouldRejectInactiveRecipientWithoutMutation() {
+        for (AccountStatus inactiveStatus : new AccountStatus[] { AccountStatus.FROZEN, AccountStatus.CLOSED }) {
+            AccountRepository accountRepository = mock(AccountRepository.class);
+            TransactionService transactionService = mock(TransactionService.class);
+            AccountService service = new AccountService(accountRepository, transactionService,
+                    mock(AccountNumberGenerator.class));
+            AccountEntity sender = account("ACC-SENDER", "Sender", 1L, "200000.00");
+            AccountEntity recipient = account("ACC-RECIPIENT", "Recipient", 2L, "0.00");
+            setStatus(recipient, inactiveStatus);
+            when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
+            when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+
+            assertThrows(AccountNotActiveException.class,
+                    () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "100000.00")));
+            assertEquals(new BigDecimal("200000.00"), sender.getBalance());
+            assertEquals(new BigDecimal("0.00"), recipient.getBalance());
+            verify(accountRepository, never()).save(any(AccountEntity.class));
+            verify(transactionService, never()).recordTransaction(any(), any(), any(), any(), any());
+        }
+    }
+
+    @Test
     void depositForCurrentUser_shouldThrowWhenWalletDoesNotExist() {
         AccountRepository accountRepository = mock(AccountRepository.class);
         TransactionService transactionService = mock(TransactionService.class);
@@ -310,6 +441,16 @@ class AccountServiceTest {
             field.set(account, id);
         } catch (ReflectiveOperationException ex) {
             throw new IllegalStateException("Unable to set account id", ex);
+        }
+    }
+
+    private void setStatus(AccountEntity account, AccountStatus status) {
+        try {
+            Field field = AccountEntity.class.getDeclaredField("status");
+            field.setAccessible(true);
+            field.set(account, status);
+        } catch (ReflectiveOperationException ex) {
+            throw new IllegalStateException("Unable to set account status", ex);
         }
     }
 }
