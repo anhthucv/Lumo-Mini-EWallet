@@ -94,6 +94,9 @@ export default function DashboardPage() {
             <Link to="/wallet" className="primary-button secondary-button-link">
               My Wallet
             </Link>
+            <Link to="/profile" className="secondary-button secondary-button-link">
+              Profile
+            </Link>
             <button type="button" className="primary-button" onClick={handleSignOut}>
               Sign out
             </button>

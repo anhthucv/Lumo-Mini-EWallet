@@ -162,7 +162,7 @@ function toWalletResponse(wallet: MyWalletResponse, response: DepositResponse): 
 
 export default function WalletPage() {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [wallet, setWallet] = useState<MyWalletResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -502,6 +502,9 @@ export default function WalletPage() {
           <Link to="/dashboard" className="secondary-button secondary-button-link">
             Dashboard
           </Link>
+          <Link to="/profile" className="secondary-button secondary-button-link">
+            Profile
+          </Link>
         </div>
 
         <div className="wallet-heading">
@@ -543,7 +546,7 @@ export default function WalletPage() {
               </div>
               <div className="summary-item">
                 <span>Owner name</span>
-                <strong>{wallet.ownerName}</strong>
+                <strong>{user?.fullName ?? wallet.ownerName}</strong>
               </div>
               <div className="summary-item">
                 <span>Account status</span>

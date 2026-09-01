@@ -20,6 +20,7 @@ export interface AuthContextValue {
   isAuthenticated: boolean;
   isHydrating: boolean;
   login: (session: LoginResponse) => void;
+  updateUser: (user: AuthenticatedUser) => void;
   logout: () => void;
 }
 
@@ -81,6 +82,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         saveAuthSession(storedSession);
         setAuthState(normalizeSession(storedSession));
         setIsHydrating(false);
+      },
+      updateUser: (user: AuthenticatedUser) => {
+        if (!authState.accessToken || !authState.tokenType || authState.expiresIn === null) {
+          return;
+        }
+        const updatedSession: AuthSession = {
+          accessToken: authState.accessToken,
+          tokenType: authState.tokenType,
+          expiresIn: authState.expiresIn,
+          user,
+        };
+        saveAuthSession(updatedSession);
+        setAuthState(normalizeSession(updatedSession));
       },
       logout: () => {
         clearAuthSession();
