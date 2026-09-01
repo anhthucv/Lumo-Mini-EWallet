@@ -78,6 +78,10 @@ public class UserEntity {
         this.fullName = fullName;
     }
 
+    public void changePasswordHash(String newPasswordHash) {
+        this.passwordHash = newPasswordHash;
+    }
+
     public UserRole getRole() {
         return role;
     }

@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError } from '../api/http';
-import { getMyProfile, updateMyProfile } from '../api/profileApi';
+import { changeMyPassword, getMyProfile, updateMyProfile } from '../api/profileApi';
 import { useAuth } from '../auth/AuthContext';
 import type { ProfileResponse } from '../types/profile';
 import './profile.css';
@@ -29,6 +29,14 @@ function getUpdateErrorMessage(error: unknown): string {
   return 'The server could not be reached. Please check your connection and try again.';
 }
 
+function getPasswordErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.status === 400) {
+    return error.message || 'The current password is incorrect or the new password is invalid.';
+  }
+  if (error instanceof ApiError) return 'Your password could not be changed. Please try again.';
+  return 'The server could not be reached. Please check your connection and try again.';
+}
+
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { logout, updateUser } = useAuth();
@@ -40,6 +48,12 @@ export default function ProfilePage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -108,6 +122,51 @@ export default function ProfilePage() {
     }
   }
 
+  async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (!currentPassword.trim()) {
+      setPasswordError('Current password must not be blank.');
+      return;
+    }
+    if (!newPassword.trim()) {
+      setPasswordError('New password must not be blank.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters long.');
+      return;
+    }
+    if (!confirmPassword) {
+      setPasswordError('Please confirm your new password.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New password and confirmation do not match.');
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      await changeMyPassword({ currentPassword, newPassword });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordSuccess('Your password was changed successfully.');
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        logout();
+        navigate('/login', { replace: true });
+        return;
+      }
+      setPasswordError(getPasswordErrorMessage(requestError));
+    } finally {
+      setPasswordSaving(false);
+    }
+  }
+
   return (
     <main className="register-shell profile-shell">
       <section className="profile-card" aria-labelledby="profile-title">
@@ -161,6 +220,27 @@ export default function ProfilePage() {
               {formError && <div className="banner error" role="alert">{formError}</div>}
               {success && <div className="banner success" role="status">{success}</div>}
               <button type="submit" className="primary-button profile-save" disabled={saving}>{saving ? 'Saving profile...' : 'Save changes'}</button>
+            </form>
+
+            <form className="profile-panel profile-edit" onSubmit={handlePasswordSubmit} noValidate>
+              <div className="profile-panel-heading"><div><span className="profile-kicker">Account security</span><h2>Change password</h2></div></div>
+              <label className="field-group" htmlFor="current-password">
+                <span className="field-label">Current password</span>
+                <input id="current-password" className="input" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => { setCurrentPassword(event.target.value); setPasswordError(null); setPasswordSuccess(null); }} disabled={passwordSaving} />
+              </label>
+              <label className="field-group" htmlFor="new-password">
+                <span className="field-label">New password</span>
+                <input id="new-password" className="input" type="password" autoComplete="new-password" minLength={8} value={newPassword} onChange={(event) => { setNewPassword(event.target.value); setPasswordError(null); setPasswordSuccess(null); }} disabled={passwordSaving} />
+              </label>
+              <label className="field-group" htmlFor="confirm-password">
+                <span className="field-label">Confirm new password</span>
+                <input id="confirm-password" className="input" type="password" autoComplete="new-password" minLength={8} value={confirmPassword} onChange={(event) => { setConfirmPassword(event.target.value); setPasswordError(null); setPasswordSuccess(null); }} disabled={passwordSaving} />
+              </label>
+              {passwordError && <div className="banner error" role="alert">{passwordError}</div>}
+              {passwordSuccess && <div className="banner success" role="status">{passwordSuccess}</div>}
+              <button type="submit" className="primary-button profile-save" disabled={passwordSaving}>
+                {passwordSaving ? 'Changing password...' : 'Change password'}
+              </button>
             </form>
           </div>
         )}
