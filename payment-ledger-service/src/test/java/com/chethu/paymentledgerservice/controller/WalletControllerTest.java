@@ -17,6 +17,8 @@ import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
 import com.chethu.paymentledgerservice.dto.RecipientResponse;
 import com.chethu.paymentledgerservice.dto.TransferRequest;
+import com.chethu.paymentledgerservice.repository.JournalRepository;
+import com.chethu.paymentledgerservice.repository.LedgerAccountRepository;
 import com.chethu.paymentledgerservice.security.AuthenticatedUserPrincipal;
 import com.chethu.paymentledgerservice.service.AccountService;
 
@@ -147,7 +149,9 @@ class WalletControllerTest {
         private BigDecimal transferAmount;
 
         StubAccountService() {
-            super(null, null, null);
+            super(null, null, null,
+                    org.mockito.Mockito.mock(LedgerAccountRepository.class),
+                    org.mockito.Mockito.mock(JournalRepository.class));
         }
 
         @Override

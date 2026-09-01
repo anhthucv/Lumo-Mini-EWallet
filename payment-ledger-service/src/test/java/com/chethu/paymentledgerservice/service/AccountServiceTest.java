@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -25,10 +27,14 @@ import com.chethu.paymentledgerservice.dto.TransferRequest;
 import com.chethu.paymentledgerservice.domain.AccountStatus;
 import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
+import com.chethu.paymentledgerservice.entity.JournalEntity;
+import com.chethu.paymentledgerservice.entity.LedgerAccountEntity;
 import com.chethu.paymentledgerservice.exception.AccountNotActiveException;
 import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
 import com.chethu.paymentledgerservice.exception.InvalidAccountNumberException;
 import com.chethu.paymentledgerservice.repository.AccountRepository;
+import com.chethu.paymentledgerservice.repository.JournalRepository;
+import com.chethu.paymentledgerservice.repository.LedgerAccountRepository;
 
 class AccountServiceTest {
 
@@ -52,7 +58,7 @@ class AccountServiceTest {
             }
         };
 
-        AccountService service = new AccountService(accountRepository, transactionService, generator);
+        AccountService service = service(accountRepository, transactionService, generator);
         CreateAccountRequest request = new CreateAccountRequest();
         request.setOwnerName("Thu");
 
@@ -71,7 +77,7 @@ class AccountServiceTest {
         AccountRepository accountRepository = mock(AccountRepository.class);
         TransactionService transactionService = mock(TransactionService.class);
         AccountNumberGenerator generator = mock(AccountNumberGenerator.class);
-        AccountService service = new AccountService(accountRepository, transactionService, generator);
+        AccountService service = service(accountRepository, transactionService, generator);
 
         AccountEntity account = new AccountEntity("ACC-999999999999", "Nguyen Van A");
         setId(account, 77L);
@@ -90,7 +96,7 @@ class AccountServiceTest {
         AccountRepository accountRepository = mock(AccountRepository.class);
         TransactionService transactionService = mock(TransactionService.class);
         AccountNumberGenerator generator = mock(AccountNumberGenerator.class);
-        AccountService service = new AccountService(accountRepository, transactionService, generator);
+        AccountService service = service(accountRepository, transactionService, generator);
 
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.empty());
 
@@ -102,7 +108,7 @@ class AccountServiceTest {
     @Test
     void getRecipient_shouldFindByAccountNumberAndReturnSafeDetails() {
         AccountRepository accountRepository = mock(AccountRepository.class);
-        AccountService service = new AccountService(accountRepository, mock(TransactionService.class),
+        AccountService service = service(accountRepository, mock(TransactionService.class),
                 mock(AccountNumberGenerator.class));
         AccountEntity account = new AccountEntity("ACC-123456789012", "Nguyen Van B");
         when(accountRepository.findByAccountNumber("ACC-123456789012")).thenReturn(Optional.of(account));
@@ -118,7 +124,7 @@ class AccountServiceTest {
     @Test
     void getRecipient_shouldThrowWhenAccountNumberDoesNotExist() {
         AccountRepository accountRepository = mock(AccountRepository.class);
-        AccountService service = new AccountService(accountRepository, mock(TransactionService.class),
+        AccountService service = service(accountRepository, mock(TransactionService.class),
                 mock(AccountNumberGenerator.class));
         when(accountRepository.findByAccountNumber("ACC-MISSING")).thenReturn(Optional.empty());
 
@@ -129,7 +135,7 @@ class AccountServiceTest {
     @Test
     void getRecipient_shouldRejectBlankAccountNumber() {
         AccountRepository accountRepository = mock(AccountRepository.class);
-        AccountService service = new AccountService(accountRepository, mock(TransactionService.class),
+        AccountService service = service(accountRepository, mock(TransactionService.class),
                 mock(AccountNumberGenerator.class));
 
         assertThrows(InvalidAccountNumberException.class, () -> service.getRecipient("  "));
@@ -140,7 +146,7 @@ class AccountServiceTest {
     void transferForCurrentUser_shouldMoveFundsAndRecordTwoTransferTransactions() {
         AccountRepository accountRepository = mock(AccountRepository.class);
         TransactionService transactionService = mock(TransactionService.class);
-        AccountService service = new AccountService(accountRepository, transactionService,
+        AccountService service = service(accountRepository, transactionService,
                 mock(AccountNumberGenerator.class));
         AccountEntity sender = account("ACC-SENDER", "Sender", 1L, "200000.00");
         AccountEntity recipient = account("ACC-RECIPIENT", "Recipient", 2L, "0.00");
@@ -167,7 +173,7 @@ class AccountServiceTest {
     @Test
     void transferForCurrentUser_shouldAllowExactlyMinimumRemainingBalance() {
         AccountRepository accountRepository = mock(AccountRepository.class);
-        AccountService service = new AccountService(accountRepository, mock(TransactionService.class),
+        AccountService service = service(accountRepository, mock(TransactionService.class),
                 mock(AccountNumberGenerator.class));
         AccountEntity sender = account("ACC-SENDER", "Sender", 1L, "100000.00");
         AccountEntity recipient = account("ACC-RECIPIENT", "Recipient", 2L, "0.00");
@@ -184,7 +190,7 @@ class AccountServiceTest {
     void transferForCurrentUser_shouldRejectBelowMinimumRemainingBalance() {
         AccountRepository accountRepository = mock(AccountRepository.class);
         TransactionService transactionService = mock(TransactionService.class);
-        AccountService service = new AccountService(accountRepository, transactionService,
+        AccountService service = service(accountRepository, transactionService,
                 mock(AccountNumberGenerator.class));
         AccountEntity sender = account("ACC-SENDER", "Sender", 1L, "100000.00");
         AccountEntity recipient = account("ACC-RECIPIENT", "Recipient", 2L, "0.00");
@@ -201,7 +207,7 @@ class AccountServiceTest {
     @Test
     void transferForCurrentUser_shouldRejectSelfTransfer() {
         AccountRepository accountRepository = mock(AccountRepository.class);
-        AccountService service = new AccountService(accountRepository, mock(TransactionService.class),
+        AccountService service = service(accountRepository, mock(TransactionService.class),
                 mock(AccountNumberGenerator.class));
         AccountEntity sender = account("ACC-SENDER", "Sender", 1L, "200000.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
@@ -214,7 +220,7 @@ class AccountServiceTest {
     @Test
     void transferForCurrentUser_shouldRejectAmountBelowMinimum() {
         AccountRepository accountRepository = mock(AccountRepository.class);
-        AccountService service = new AccountService(accountRepository, mock(TransactionService.class),
+        AccountService service = service(accountRepository, mock(TransactionService.class),
                 mock(AccountNumberGenerator.class));
 
         assertThrows(com.chethu.paymentledgerservice.exception.InvalidTransferException.class,
@@ -225,7 +231,7 @@ class AccountServiceTest {
     @Test
     void transferForCurrentUser_shouldThrowWhenRecipientDoesNotExist() {
         AccountRepository accountRepository = mock(AccountRepository.class);
-        AccountService service = new AccountService(accountRepository, mock(TransactionService.class),
+        AccountService service = service(accountRepository, mock(TransactionService.class),
                 mock(AccountNumberGenerator.class));
         AccountEntity sender = account("ACC-SENDER", "Sender", 1L, "200000.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
@@ -240,7 +246,16 @@ class AccountServiceTest {
         AccountRepository accountRepository = mock(AccountRepository.class);
         TransactionService transactionService = mock(TransactionService.class);
         AccountNumberGenerator generator = mock(AccountNumberGenerator.class);
-        AccountService service = new AccountService(accountRepository, transactionService, generator);
+        LedgerAccountRepository ledgerAccountRepository = mock(LedgerAccountRepository.class);
+        JournalRepository journalRepository = mock(JournalRepository.class);
+        when(ledgerAccountRepository.findByWalletAccount(any())).thenReturn(Optional.empty());
+        when(ledgerAccountRepository.findByCode("SYSTEM_CLEARING")).thenReturn(Optional.empty());
+        when(ledgerAccountRepository.save(any(LedgerAccountEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(journalRepository.save(any(JournalEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        AccountService service = new AccountService(accountRepository, transactionService, generator,
+                ledgerAccountRepository, journalRepository);
 
         AccountEntity account = new AccountEntity("ACC-999999999999", "Nguyen Van A");
         setId(account, 77L);
@@ -254,15 +269,15 @@ class AccountServiceTest {
         verify(accountRepository).findByUserId(42L);
         verify(accountRepository).save(account);
         verify(transactionService).recordTransaction(
-                account, null, TransactionType.DEPOSIT,
-                new BigDecimal("100000.00"), new BigDecimal("100000.00"));
+                eq(account), isNull(), eq(TransactionType.DEPOSIT),
+                eq(new BigDecimal("100000.00")), eq(new BigDecimal("100000.00")), any(JournalEntity.class));
     }
 
     @Test
     void depositForCurrentUser_shouldRejectAmountBelowMinimum() {
         AccountRepository accountRepository = mock(AccountRepository.class);
         TransactionService transactionService = mock(TransactionService.class);
-        AccountService service = new AccountService(accountRepository, transactionService, mock(AccountNumberGenerator.class));
+        AccountService service = service(accountRepository, transactionService, mock(AccountNumberGenerator.class));
         AccountEntity account = new AccountEntity("ACC-999999999999", "Nguyen Van A");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
 
@@ -276,7 +291,7 @@ class AccountServiceTest {
     void depositForCurrentUser_shouldRejectFrozenWalletBeforeMutation() {
         AccountRepository accountRepository = mock(AccountRepository.class);
         TransactionService transactionService = mock(TransactionService.class);
-        AccountService service = new AccountService(accountRepository, transactionService,
+        AccountService service = service(accountRepository, transactionService,
                 mock(AccountNumberGenerator.class));
         AccountEntity account = account("ACC-FROZEN", "Nguyen Van A", 77L, "100000.00");
         setStatus(account, AccountStatus.FROZEN);
@@ -293,7 +308,7 @@ class AccountServiceTest {
     void depositForCurrentUser_shouldRejectClosedWalletBeforeMutation() {
         AccountRepository accountRepository = mock(AccountRepository.class);
         TransactionService transactionService = mock(TransactionService.class);
-        AccountService service = new AccountService(accountRepository, transactionService,
+        AccountService service = service(accountRepository, transactionService,
                 mock(AccountNumberGenerator.class));
         AccountEntity account = account("ACC-CLOSED", "Nguyen Van A", 77L, "100000.00");
         setStatus(account, AccountStatus.CLOSED);
@@ -310,7 +325,7 @@ class AccountServiceTest {
     void withdrawForCurrentUser_shouldAllowActiveWalletAndRecordLedger() {
         AccountRepository accountRepository = mock(AccountRepository.class);
         TransactionService transactionService = mock(TransactionService.class);
-        AccountService service = new AccountService(accountRepository, transactionService,
+        AccountService service = service(accountRepository, transactionService,
                 mock(AccountNumberGenerator.class));
         AccountEntity account = account("ACC-ACTIVE", "Nguyen Van A", 77L, "200000.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
@@ -327,7 +342,7 @@ class AccountServiceTest {
     void withdrawForCurrentUser_shouldRejectFrozenWalletWithoutMutation() {
         AccountRepository accountRepository = mock(AccountRepository.class);
         TransactionService transactionService = mock(TransactionService.class);
-        AccountService service = new AccountService(accountRepository, transactionService,
+        AccountService service = service(accountRepository, transactionService,
                 mock(AccountNumberGenerator.class));
         AccountEntity account = account("ACC-FROZEN", "Nguyen Van A", 77L, "200000.00");
         setStatus(account, AccountStatus.FROZEN);
@@ -344,7 +359,7 @@ class AccountServiceTest {
     void withdrawForCurrentUser_shouldRejectClosedWalletWithoutMutation() {
         AccountRepository accountRepository = mock(AccountRepository.class);
         TransactionService transactionService = mock(TransactionService.class);
-        AccountService service = new AccountService(accountRepository, transactionService,
+        AccountService service = service(accountRepository, transactionService,
                 mock(AccountNumberGenerator.class));
         AccountEntity account = account("ACC-CLOSED", "Nguyen Van A", 77L, "200000.00");
         setStatus(account, AccountStatus.CLOSED);
@@ -362,7 +377,7 @@ class AccountServiceTest {
         for (AccountStatus inactiveStatus : new AccountStatus[] { AccountStatus.FROZEN, AccountStatus.CLOSED }) {
             AccountRepository accountRepository = mock(AccountRepository.class);
             TransactionService transactionService = mock(TransactionService.class);
-            AccountService service = new AccountService(accountRepository, transactionService,
+            AccountService service = service(accountRepository, transactionService,
                     mock(AccountNumberGenerator.class));
             AccountEntity sender = account("ACC-SENDER", "Sender", 1L, "200000.00");
             AccountEntity recipient = account("ACC-RECIPIENT", "Recipient", 2L, "0.00");
@@ -384,7 +399,7 @@ class AccountServiceTest {
         for (AccountStatus inactiveStatus : new AccountStatus[] { AccountStatus.FROZEN, AccountStatus.CLOSED }) {
             AccountRepository accountRepository = mock(AccountRepository.class);
             TransactionService transactionService = mock(TransactionService.class);
-            AccountService service = new AccountService(accountRepository, transactionService,
+            AccountService service = service(accountRepository, transactionService,
                     mock(AccountNumberGenerator.class));
             AccountEntity sender = account("ACC-SENDER", "Sender", 1L, "200000.00");
             AccountEntity recipient = account("ACC-RECIPIENT", "Recipient", 2L, "0.00");
@@ -405,7 +420,7 @@ class AccountServiceTest {
     void depositForCurrentUser_shouldThrowWhenWalletDoesNotExist() {
         AccountRepository accountRepository = mock(AccountRepository.class);
         TransactionService transactionService = mock(TransactionService.class);
-        AccountService service = new AccountService(accountRepository, transactionService, mock(AccountNumberGenerator.class));
+        AccountService service = service(accountRepository, transactionService, mock(AccountNumberGenerator.class));
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.empty());
 
         assertThrows(AccountNotFoundException.class,
@@ -418,6 +433,12 @@ class AccountServiceTest {
         MoneyOperationRequest request = new MoneyOperationRequest();
         request.setAmount(new BigDecimal(amount));
         return request;
+    }
+
+    private AccountService service(AccountRepository accountRepository, TransactionService transactionService,
+            AccountNumberGenerator accountNumberGenerator) {
+        return new AccountService(accountRepository, transactionService, accountNumberGenerator,
+                mock(LedgerAccountRepository.class), mock(JournalRepository.class));
     }
 
     private TransferRequest transferRequest(String recipientAccountNumber, String amount) {

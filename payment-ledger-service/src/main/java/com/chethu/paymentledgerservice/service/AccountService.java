@@ -2,6 +2,7 @@ package com.chethu.paymentledgerservice.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 
 import org.springframework.stereotype.Service;
@@ -10,6 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.domain.WalletRules;
 import com.chethu.paymentledgerservice.domain.AccountStatus;
+import com.chethu.paymentledgerservice.domain.AccountClass;
+import com.chethu.paymentledgerservice.domain.LedgerAccountType;
+import com.chethu.paymentledgerservice.domain.LedgerEntryType;
 import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.CreateAccountRequest;
 import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
@@ -18,23 +22,33 @@ import com.chethu.paymentledgerservice.dto.RecipientResponse;
 import com.chethu.paymentledgerservice.dto.TransferRequest;
 import com.chethu.paymentledgerservice.dto.UpdateAccountRequest;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
+import com.chethu.paymentledgerservice.entity.JournalEntity;
+import com.chethu.paymentledgerservice.entity.LedgerAccountEntity;
+import com.chethu.paymentledgerservice.entity.LedgerEntryEntity;
 import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
 import com.chethu.paymentledgerservice.exception.AccountNotActiveException;
 import com.chethu.paymentledgerservice.exception.InvalidAccountNumberException;
 import com.chethu.paymentledgerservice.exception.InvalidTransferException;
 import com.chethu.paymentledgerservice.repository.AccountRepository;
+import com.chethu.paymentledgerservice.repository.JournalRepository;
+import com.chethu.paymentledgerservice.repository.LedgerAccountRepository;
 
 @Service
 public class AccountService {
     private final AccountRepository accountRepository;
     private final TransactionService transactionService;
     private final AccountNumberGenerator accountNumberGenerator;
+    private final LedgerAccountRepository ledgerAccountRepository;
+    private final JournalRepository journalRepository;
 
     public AccountService(AccountRepository accountRepository,TransactionService transactionService,
-            AccountNumberGenerator accountNumberGenerator){
+            AccountNumberGenerator accountNumberGenerator, LedgerAccountRepository ledgerAccountRepository,
+            JournalRepository journalRepository){
         this.accountRepository=accountRepository;
         this.transactionService = transactionService;
         this.accountNumberGenerator = accountNumberGenerator;
+        this.ledgerAccountRepository = ledgerAccountRepository;
+        this.journalRepository = journalRepository;
     }
 
 
@@ -114,12 +128,36 @@ public class AccountService {
     private AccountResponse depositToAccount(AccountEntity account, MoneyOperationRequest request) {
         if (request == null || request.getAmount() == null
                 || request.getAmount().compareTo(WalletRules.MINIMUM_OPERATION_AMOUNT) < 0) {
-            throw new IllegalArgumentException("Amount must be at least 1,000 VNĐ");
+            throw new IllegalArgumentException("Amount must be at least 1 VNĐ");
         }
+        LedgerAccountEntity walletLedgerAccount = resolveWalletLedgerAccount(account);
+        LedgerAccountEntity systemClearingAccount = resolveSystemClearingAccount();
         account.deposit(request.getAmount());
+        JournalEntity journal = new JournalEntity("DEPOSIT-" + UUID.randomUUID());
+        new LedgerEntryEntity(journal, systemClearingAccount, LedgerEntryType.DEBIT, request.getAmount());
+        new LedgerEntryEntity(journal, walletLedgerAccount, LedgerEntryType.CREDIT, request.getAmount());
+        if (!journal.isBalanced()) {
+            throw new IllegalStateException("Deposit ledger journal is not balanced");
+        }
+        journalRepository.save(journal);
         AccountEntity updatedAccount = accountRepository.save(account);
-        transactionService.recordTransaction(account, null, TransactionType.DEPOSIT, request.getAmount(),account.getBalance());
+        transactionService.recordTransaction(account, null, TransactionType.DEPOSIT, request.getAmount(),
+                account.getBalance(), journal);
         return toResponse(updatedAccount);
+    }
+
+    private LedgerAccountEntity resolveWalletLedgerAccount(AccountEntity account) {
+        return ledgerAccountRepository.findByWalletAccount(account)
+                .orElseGet(() -> ledgerAccountRepository.save(new LedgerAccountEntity(
+                        "WALLET-" + account.getAccountNumber(), LedgerAccountType.WALLET,
+                        AccountClass.LIABILITY, account)));
+    }
+
+    private LedgerAccountEntity resolveSystemClearingAccount() {
+        return ledgerAccountRepository.findByCode("SYSTEM_CLEARING")
+                .orElseGet(() -> ledgerAccountRepository.save(new LedgerAccountEntity(
+                        "SYSTEM_CLEARING", LedgerAccountType.SYSTEM_CLEARING,
+                        AccountClass.ASSET, null)));
     }
 
     @Transactional

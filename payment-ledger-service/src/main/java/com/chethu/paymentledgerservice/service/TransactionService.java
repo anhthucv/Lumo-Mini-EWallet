@@ -12,12 +12,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.domain.TransactionStatus;
 import com.chethu.paymentledgerservice.dto.TransactionResponse;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
+import com.chethu.paymentledgerservice.entity.JournalEntity;
 import com.chethu.paymentledgerservice.entity.TransactionEntity;
 import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
 import com.chethu.paymentledgerservice.exception.InvalidTransactionFilterException;
@@ -50,7 +50,15 @@ public class TransactionService {
     }
 
     public void recordTransaction(AccountEntity account, AccountEntity relatedAccount, TransactionType transactionType, BigDecimal amount,BigDecimal balance){
+        recordTransaction(account, relatedAccount, transactionType, amount, balance, null);
+    }
+
+    public void recordTransaction(AccountEntity account, AccountEntity relatedAccount, TransactionType transactionType,
+            BigDecimal amount, BigDecimal balance, JournalEntity journal) {
         TransactionEntity transaction = new TransactionEntity (account,relatedAccount, transactionType, amount,balance);
+        if (journal != null) {
+            transaction.associateJournal(journal);
+        }
         transactionRepository.save(transaction);
         log.info("Transaction recorded: accountId={}, type={}, amount={}",
             account.getId(), transactionType, amount
