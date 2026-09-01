@@ -15,6 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import com.chethu.paymentledgerservice.domain.TransactionType;
 
 
 @RestController
@@ -30,7 +34,12 @@ public class TransactionController {
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt,desc") String sort) {
+            @RequestParam(defaultValue = "createdAt,desc") String sort,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) BigDecimal minAmount,
+            @RequestParam(required = false) BigDecimal maxAmount) {
         if (principal == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
         }
@@ -38,9 +47,22 @@ public class TransactionController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination values");
         }
 
+        TransactionType transactionType = parseType(type);
         Page<TransactionResponse> response = transactionService.getHistoryForUser(
-                principal.userId(), PageRequest.of(page, size, parseSort(sort)));
+                principal.userId(), transactionType, fromDate, toDate, minAmount, maxAmount,
+                PageRequest.of(page, size, parseSort(sort)));
         return ResponseEntity.ok(response);
+    }
+
+    private TransactionType parseType(String type) {
+        if (type == null || type.isBlank()) {
+            return null;
+        }
+        try {
+            return TransactionType.valueOf(type.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported transaction type");
+        }
     }
 
     private Sort parseSort(String sort) {
@@ -62,4 +84,3 @@ public class TransactionController {
     }
     
 }
-

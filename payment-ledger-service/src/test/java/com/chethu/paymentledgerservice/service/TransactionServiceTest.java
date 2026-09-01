@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.dto.TransactionResponse;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,7 +45,8 @@ public class TransactionServiceTest {
         Pageable pageable = PageRequest.of(0,5);
         when (accountRepository.findByUserId(userId)).thenReturn(java.util.Optional.empty());
         
-        assertThrows(AccountNotFoundException.class, () -> transactionService.getHistoryForUser(userId, pageable));
+        assertThrows(AccountNotFoundException.class, () -> transactionService.getHistoryForUser(
+                userId, null, null, null, null, null, pageable));
     }
 
     @Test 
@@ -56,9 +59,12 @@ public class TransactionServiceTest {
         TransactionEntity transaction = new TransactionEntity(account,null, TransactionType.DEPOSIT,new BigDecimal("50000.00"),new BigDecimal("50000.00"));
 
         Page<TransactionEntity> transactionPage = new PageImpl<>(List.of(transaction));
-        when (transactionRepository.findByAccount(account, pageable)).thenReturn(transactionPage);
+        when (transactionRepository.findAll(org.mockito.ArgumentMatchers.<Specification<TransactionEntity>>any(),
+                org.mockito.ArgumentMatchers.eq(pageable))).thenReturn(transactionPage);
 
-        Page<TransactionResponse>  result = transactionService.getHistoryForUser(userId, pageable);
+        Page<TransactionResponse> result = transactionService.getHistoryForUser(
+                userId, TransactionType.DEPOSIT, LocalDate.of(2026, 9, 1),
+                LocalDate.of(2026, 9, 30), new BigDecimal("100.00"), new BigDecimal("100000.00"), pageable);
 
         assertEquals(1, result.getTotalElements());
         TransactionResponse response = result.getContent().get(0);
@@ -67,8 +73,18 @@ public class TransactionServiceTest {
         assertEquals(new BigDecimal("50000.00"), response.getAmount());   
         assertEquals(new BigDecimal("50000.00"), response.getBalanceAfterTransaction());           
         verify(accountRepository).findByUserId(userId);
-        verify(transactionRepository).findByAccount(account, pageable);
+        verify(transactionRepository).findAll(org.mockito.ArgumentMatchers.<Specification<TransactionEntity>>any(),
+                org.mockito.ArgumentMatchers.eq(pageable));
     } 
+
+    @Test
+    void getHistoryForUser_shouldRejectInvalidFilterRangesBeforeQuerying() {
+        assertThrows(com.chethu.paymentledgerservice.exception.InvalidTransactionFilterException.class,
+                () -> transactionService.getHistoryForUser(42L, null,
+                        LocalDate.of(2026, 9, 2), LocalDate.of(2026, 9, 1),
+                        new BigDecimal("10"), new BigDecimal("1"), PageRequest.of(0, 10)));
+        org.mockito.Mockito.verifyNoInteractions(transactionRepository);
+    }
     
     @Test
     void recordTransaction_shoudSaveTransaction(){

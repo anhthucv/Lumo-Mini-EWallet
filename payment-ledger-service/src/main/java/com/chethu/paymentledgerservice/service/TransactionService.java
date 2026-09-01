@@ -3,11 +3,14 @@ package com.chethu.paymentledgerservice.service;
 
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +19,7 @@ import com.chethu.paymentledgerservice.dto.TransactionResponse;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.entity.TransactionEntity;
 import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
+import com.chethu.paymentledgerservice.exception.InvalidTransactionFilterException;
 import com.chethu.paymentledgerservice.repository.AccountRepository;
 import com.chethu.paymentledgerservice.repository.TransactionRepository;
 
@@ -50,16 +54,60 @@ public class TransactionService {
         );
     }
 
-    public Page<TransactionResponse> getHistoryForUser(Long userId, Pageable pageable){
+    public Page<TransactionResponse> getHistoryForUser(Long userId, TransactionType type,
+            LocalDate fromDate, LocalDate toDate, BigDecimal minAmount, BigDecimal maxAmount,
+            Pageable pageable){
+        validateFilters(fromDate, toDate, minAmount, maxAmount);
         AccountEntity account = accountRepository.findByUserId(userId)
                 .orElseThrow(() -> {
                     log.warn("Transaction history requested without an account for userId={}", userId);
                     return new AccountNotFoundException(userId);
                 });
         log.info("Fetching transaction history for authenticated account: accountId={}", account.getId());
-        Page<TransactionEntity> transactions = transactionRepository.findByAccount(account, pageable);
+        Specification<TransactionEntity> specification = (root, query, criteriaBuilder) ->
+                criteriaBuilder.equal(root.get("account"), account);
+        if (type != null) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("transactionType"), type));
+        }
+        if (fromDate != null) {
+            LocalDateTime from = fromDate.atStartOfDay();
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), from));
+        }
+        if (toDate != null) {
+            LocalDateTime exclusiveEnd = toDate.plusDays(1).atStartOfDay();
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.lessThan(root.get("createdAt"), exclusiveEnd));
+        }
+        if (minAmount != null) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.greaterThanOrEqualTo(root.get("amount"), minAmount));
+        }
+        if (maxAmount != null) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.lessThanOrEqualTo(root.get("amount"), maxAmount));
+        }
+
+        Page<TransactionEntity> transactions = transactionRepository.findAll(specification, pageable);
         Page<TransactionResponse> responses = transactions.map(this::toResponse);
         return responses;
+    }
+
+    private void validateFilters(LocalDate fromDate, LocalDate toDate,
+            BigDecimal minAmount, BigDecimal maxAmount) {
+        if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+            throw new InvalidTransactionFilterException("fromDate must be on or before toDate");
+        }
+        if (minAmount != null && minAmount.signum() < 0) {
+            throw new InvalidTransactionFilterException("minAmount must not be negative");
+        }
+        if (maxAmount != null && maxAmount.signum() < 0) {
+            throw new InvalidTransactionFilterException("maxAmount must not be negative");
+        }
+        if (minAmount != null && maxAmount != null && minAmount.compareTo(maxAmount) > 0) {
+            throw new InvalidTransactionFilterException("minAmount must be less than or equal to maxAmount");
+        }
     }
 
 

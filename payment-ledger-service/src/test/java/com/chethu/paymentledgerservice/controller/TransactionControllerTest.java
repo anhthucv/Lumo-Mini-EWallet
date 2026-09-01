@@ -27,19 +27,22 @@ class TransactionControllerTest {
         AuthenticatedUserPrincipal principal = new AuthenticatedUserPrincipal(
                 42L, "user@example.com", "User", null, null);
         Page<TransactionResponse> history = new PageImpl<>(List.of());
-        when(service.getHistoryForUser(eq(42L), any(Pageable.class))).thenReturn(history);
+        when(service.getHistoryForUser(eq(42L), eq(null), eq(null), eq(null), eq(null), eq(null), any(Pageable.class)))
+                .thenReturn(history);
 
-        Page<TransactionResponse> response = controller.getHistory(principal, 0, 10, "createdAt,desc").getBody();
+        Page<TransactionResponse> response = controller.getHistory(
+                principal, 0, 10, "createdAt,desc", null, null, null, null, null).getBody();
 
         assertNotNull(response);
         assertEquals(0, response.getTotalElements());
-        verify(service).getHistoryForUser(eq(42L), any(Pageable.class));
+        verify(service).getHistoryForUser(eq(42L), eq(null), eq(null), eq(null), eq(null), eq(null), any(Pageable.class));
     }
 
     @Test
     void getHistory_shouldRejectClientAccountIdByMethodShape() throws Exception {
-        assertEquals(4, TransactionController.class.getMethod(
-                "getHistory", AuthenticatedUserPrincipal.class, int.class, int.class, String.class)
-                .getParameterCount());
+        assertEquals(9, TransactionController.class.getMethod(
+                "getHistory", AuthenticatedUserPrincipal.class, int.class, int.class, String.class,
+                String.class, java.time.LocalDate.class, java.time.LocalDate.class,
+                java.math.BigDecimal.class, java.math.BigDecimal.class).getParameterCount());
     }
 }
