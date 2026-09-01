@@ -3,6 +3,7 @@ package com.chethu.paymentledgerservice.entity;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import com.chethu.paymentledgerservice.domain.TransactionType;
+import com.chethu.paymentledgerservice.domain.TransactionStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -36,6 +37,10 @@ public class TransactionEntity {
     @Column(name = "type", nullable = false, length=50)
     private TransactionType transactionType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 50)
+    private TransactionStatus status;
+
     @Column(name = "amount",nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
@@ -57,11 +62,23 @@ public class TransactionEntity {
         BigDecimal amount,
         BigDecimal balanceAfterTransaction
 ) {
+    this(account, relatedAccount, transactionType, amount, balanceAfterTransaction, TransactionStatus.SUCCESS);
+}
+
+    public TransactionEntity(
+        AccountEntity account,
+        AccountEntity relatedAccount,
+        TransactionType transactionType,
+        BigDecimal amount,
+        BigDecimal balanceAfterTransaction,
+        TransactionStatus status
+) {
     this.account=account;
     this.relatedAccount = relatedAccount;
     this.transactionType = transactionType;
     this.amount = amount;
     this.balanceAfterTransaction = balanceAfterTransaction;
+    this.status = status;
 }
     protected TransactionEntity(){}
 
@@ -71,6 +88,32 @@ public class TransactionEntity {
     public TransactionType getTransactionType (){return this.transactionType;}
     public BigDecimal getAmount(){return this.amount;}
     public BigDecimal getBalanceAfterTransaction(){return this.balanceAfterTransaction;}
+    public TransactionStatus getStatus(){return this.status;}
     public LocalDateTime getCreatedAt(){return this.createdAt;}
+
+    public void transitionTo(TransactionStatus newStatus) {
+        if (!isAllowedTransition(this.status, newStatus)) {
+            throw new com.chethu.paymentledgerservice.exception.InvalidTransactionStatusTransitionException(
+                    this.status, newStatus);
+        }
+        this.status = newStatus;
+    }
+
+    private boolean isAllowedTransition(TransactionStatus current, TransactionStatus target) {
+        if (current == null || target == null) {
+            return false;
+        }
+        return switch (current) {
+            case PENDING -> target == TransactionStatus.PROCESSING
+                    || target == TransactionStatus.SUCCESS
+                    || target == TransactionStatus.FAILED
+                    || target == TransactionStatus.CANCELLED;
+            case PROCESSING -> target == TransactionStatus.SUCCESS
+                    || target == TransactionStatus.FAILED
+                    || target == TransactionStatus.CANCELLED;
+            case SUCCESS -> target == TransactionStatus.REVERSED;
+            case FAILED, CANCELLED, REVERSED -> false;
+        };
+    }
 
 }

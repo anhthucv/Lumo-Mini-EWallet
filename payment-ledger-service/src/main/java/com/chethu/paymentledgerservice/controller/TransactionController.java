@@ -20,6 +20,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import com.chethu.paymentledgerservice.domain.TransactionType;
+import com.chethu.paymentledgerservice.domain.TransactionStatus;
 
 
 @RestController
@@ -37,6 +38,7 @@ public class TransactionController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt,desc") String sort,
             @RequestParam(required = false) String type,
+            @RequestParam(required = false) String status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(required = false) BigDecimal minAmount,
@@ -49,10 +51,45 @@ public class TransactionController {
         }
 
         TransactionType transactionType = parseType(type);
+        TransactionStatus transactionStatus = parseStatus(status);
         Page<TransactionResponse> response = transactionService.getHistoryForUser(
-                principal.userId(), transactionType, fromDate, toDate, minAmount, maxAmount,
+                principal.userId(), transactionType, transactionStatus, fromDate, toDate, minAmount, maxAmount,
                 PageRequest.of(page, size, parseSort(sort)));
         return ResponseEntity.ok(response);
+    }
+
+    // Retain the pre-status method shape for direct callers while the routed method supports status filtering.
+    public ResponseEntity<Page<TransactionResponse>> getHistory(
+            AuthenticatedUserPrincipal principal,
+            int page,
+            int size,
+            String sort,
+            String type,
+            LocalDate fromDate,
+            LocalDate toDate,
+            BigDecimal minAmount,
+            BigDecimal maxAmount) {
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+        if (page < 0 || size < 1 || size > 100) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid pagination values");
+        }
+        Page<TransactionResponse> response = transactionService.getHistoryForUser(
+                principal.userId(), parseType(type), fromDate, toDate, minAmount, maxAmount,
+                PageRequest.of(page, size, parseSort(sort)));
+        return ResponseEntity.ok(response);
+    }
+
+    private TransactionStatus parseStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        try {
+            return TransactionStatus.valueOf(status.trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported transaction status");
+        }
     }
 
     private TransactionType parseType(String type) {

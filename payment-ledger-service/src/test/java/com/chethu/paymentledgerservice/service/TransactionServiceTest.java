@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
 import com.chethu.paymentledgerservice.domain.TransactionType;
+import com.chethu.paymentledgerservice.domain.TransactionStatus;
 import com.chethu.paymentledgerservice.dto.TransactionResponse;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.entity.TransactionEntity;
@@ -70,6 +71,7 @@ public class TransactionServiceTest {
         assertEquals(1, result.getTotalElements());
         TransactionResponse response = result.getContent().get(0);
         assertEquals(TransactionType.DEPOSIT, response.getTransactionType());
+        assertEquals(TransactionStatus.SUCCESS, response.getStatus());
         assertNull( response.getRelatedAccountId());
         assertEquals(new BigDecimal("50000.00"), response.getAmount());   
         assertEquals(new BigDecimal("50000.00"), response.getBalanceAfterTransaction());           
@@ -98,6 +100,7 @@ public class TransactionServiceTest {
         TransactionResponse response = transactionService.getTransactionForUser(42L, 7L);
 
         assertEquals(TransactionType.WITHDRAW, response.getTransactionType());
+        assertEquals(TransactionStatus.SUCCESS, response.getStatus());
         assertEquals(new BigDecimal("100.00"), response.getAmount());
         assertNull(response.getRelatedAccountId());
         verify(accountRepository).findByUserId(42L);
@@ -122,5 +125,19 @@ public class TransactionServiceTest {
         verify(transactionRepository).save(any(TransactionEntity.class));
 
 
+    }
+
+    @Test
+    void getHistoryForUser_shouldApplyStatusFilterToSpecification() {
+        AccountEntity account = new AccountEntity("ACC-Test", "Test user");
+        when(accountRepository.findByUserId(42L)).thenReturn(java.util.Optional.of(account));
+        when(transactionRepository.findAll(org.mockito.ArgumentMatchers.<Specification<TransactionEntity>>any(),
+                any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
+
+        transactionService.getHistoryForUser(42L, null, TransactionStatus.SUCCESS,
+                null, null, null, null, PageRequest.of(0, 10));
+
+        verify(transactionRepository).findAll(org.mockito.ArgumentMatchers.<Specification<TransactionEntity>>any(),
+                any(Pageable.class));
     }
 }

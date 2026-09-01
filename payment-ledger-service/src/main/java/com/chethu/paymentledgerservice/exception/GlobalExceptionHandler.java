@@ -81,6 +81,12 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.NOT_FOUND, "TRANSACTION_NOT_FOUND", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(InvalidTransactionStatusTransitionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidTransactionStatusTransition(
+            InvalidTransactionStatusTransitionException ex, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "INVALID_TRANSACTION_STATUS_TRANSITION", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException ex, HttpServletRequest request) {
         return error(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "Authenticated user could not be found", request);

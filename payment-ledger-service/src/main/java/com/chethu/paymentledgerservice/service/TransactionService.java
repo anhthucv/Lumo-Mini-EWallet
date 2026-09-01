@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.chethu.paymentledgerservice.domain.TransactionType;
+import com.chethu.paymentledgerservice.domain.TransactionStatus;
 import com.chethu.paymentledgerservice.dto.TransactionResponse;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.entity.TransactionEntity;
@@ -42,7 +43,8 @@ public class TransactionService {
             transaction.getTransactionType(), 
             transaction.getAmount(), 
             transaction.getBalanceAfterTransaction(),
-            transaction.getCreatedAt()
+            transaction.getCreatedAt(),
+            transaction.getStatus()
         );
         return response;
     }
@@ -58,6 +60,12 @@ public class TransactionService {
     public Page<TransactionResponse> getHistoryForUser(Long userId, TransactionType type,
             LocalDate fromDate, LocalDate toDate, BigDecimal minAmount, BigDecimal maxAmount,
             Pageable pageable){
+        return getHistoryForUser(userId, type, null, fromDate, toDate, minAmount, maxAmount, pageable);
+    }
+
+    public Page<TransactionResponse> getHistoryForUser(Long userId, TransactionType type, TransactionStatus status,
+            LocalDate fromDate, LocalDate toDate, BigDecimal minAmount, BigDecimal maxAmount,
+            Pageable pageable){
         validateFilters(fromDate, toDate, minAmount, maxAmount);
         AccountEntity account = accountRepository.findByUserId(userId)
                 .orElseThrow(() -> {
@@ -70,6 +78,10 @@ public class TransactionService {
         if (type != null) {
             specification = specification.and((root, query, criteriaBuilder) ->
                     criteriaBuilder.equal(root.get("transactionType"), type));
+        }
+        if (status != null) {
+            specification = specification.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.equal(root.get("status"), status));
         }
         if (fromDate != null) {
             LocalDateTime from = fromDate.atStartOfDay();
