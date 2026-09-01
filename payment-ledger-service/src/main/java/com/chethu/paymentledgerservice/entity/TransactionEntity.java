@@ -41,6 +41,10 @@ public class TransactionEntity {
     @Column(name = "status", nullable = false, length = 50)
     private TransactionStatus status;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "journal_id")
+    private JournalEntity journal;
+
     @Column(name = "amount",nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
@@ -90,6 +94,14 @@ public class TransactionEntity {
     public BigDecimal getBalanceAfterTransaction(){return this.balanceAfterTransaction;}
     public TransactionStatus getStatus(){return this.status;}
     public LocalDateTime getCreatedAt(){return this.createdAt;}
+    public JournalEntity getJournal(){return this.journal;}
+
+    public void associateJournal(JournalEntity journal) {
+        if (journal == null || (this.journal != null && this.journal != journal)) {
+            throw new IllegalArgumentException("Transaction journal association is invalid");
+        }
+        this.journal = journal;
+    }
 
     public void transitionTo(TransactionStatus newStatus) {
         if (!isAllowedTransition(this.status, newStatus)) {
