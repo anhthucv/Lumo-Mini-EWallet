@@ -51,3 +51,11 @@ export interface TransactionPageResponse {
   first: boolean;
   last: boolean;
 }
+
+export interface TransactionFilters {
+  type?: TransactionType;
+  fromDate?: string;
+  toDate?: string;
+  minAmount?: string;
+  maxAmount?: string;
+}

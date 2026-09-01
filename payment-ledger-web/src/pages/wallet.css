@@ -167,6 +167,26 @@
   font-size: 0.86rem;
 }
 
+.history-filters {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.34);
+}
+
+.history-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.history-filter-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .transaction-list {
   display: grid;
   gap: 10px;
@@ -298,6 +318,14 @@
   .transaction-values,
   .transaction-related {
     margin-left: 44px;
+  }
+
+  .history-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .history-filter-actions {
+    flex-direction: column;
   }
 
   .deposit-minimum {

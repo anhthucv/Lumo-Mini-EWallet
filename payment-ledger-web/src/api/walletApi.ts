@@ -4,6 +4,7 @@ import type {
   MyWalletResponse,
   RecipientResponse,
   TransactionPageResponse,
+  TransactionFilters,
   TransferRequest,
   TransferResponse,
 } from '../types/wallet';
@@ -55,13 +56,24 @@ export function transfer(
   });
 }
 
-export function getTransactions(
+export function getTransactions({
   page = 0,
   size = 10,
   sort = 'createdAt,desc',
-  signal?: AbortSignal,
-): Promise<TransactionPageResponse> {
+  signal,
+  ...filters
+}: TransactionFilters & {
+  page?: number;
+  size?: number;
+  sort?: string;
+  signal?: AbortSignal;
+} = {}): Promise<TransactionPageResponse> {
   const query = new URLSearchParams({ page: String(page), size: String(size), sort });
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      query.set(key, value);
+    }
+  });
   return requestJson<TransactionPageResponse>(`/transactions?${query.toString()}`, {
     method: 'GET',
     signal,
