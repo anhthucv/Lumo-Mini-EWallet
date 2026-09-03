@@ -59,6 +59,7 @@ class LedgerBalanceConsistencyTest {
         Fixture fixture = fixture();
         AccountEntity account = account("ACC-DEPOSIT", 1L, "500000.00");
         when(fixture.accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(fixture.accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(account));
         when(fixture.ledgerAccountRepository.findByWalletAccount(account)).thenReturn(Optional.empty());
         when(fixture.ledgerAccountRepository.findByCode("SYSTEM_CLEARING")).thenReturn(Optional.empty());
         when(fixture.ledgerAccountRepository.save(any(LedgerAccountEntity.class)))
@@ -89,6 +90,7 @@ class LedgerBalanceConsistencyTest {
         LedgerAccountEntity wallet = walletAccount(account);
         LedgerAccountEntity clearing = systemAccount();
         when(fixture.accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(fixture.accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(account));
         when(fixture.ledgerAccountRepository.findByWalletAccount(account)).thenReturn(Optional.of(wallet));
         when(fixture.ledgerAccountRepository.findByCode("SYSTEM_CLEARING")).thenReturn(Optional.of(clearing));
 
@@ -117,6 +119,8 @@ class LedgerBalanceConsistencyTest {
         AccountEntity recipient = account("ACC-RECIPIENT", 2L, "50000.00");
         when(fixture.accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
         when(fixture.accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+        when(fixture.accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+        when(fixture.accountRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(recipient));
         when(fixture.ledgerAccountRepository.findByWalletAccount(sender)).thenReturn(Optional.of(walletAccount(sender)));
         when(fixture.ledgerAccountRepository.findByWalletAccount(recipient)).thenReturn(Optional.of(walletAccount(recipient)));
 
@@ -149,6 +153,7 @@ class LedgerBalanceConsistencyTest {
         AccountEntity frozen = account("ACC-FROZEN", 1L, "100000.00");
         setField(frozen, "status", AccountStatus.FROZEN);
         when(frozenFixture.accountRepository.findByUserId(42L)).thenReturn(Optional.of(frozen));
+        when(frozenFixture.accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(frozen));
         assertThrows(AccountNotActiveException.class,
                 () -> frozenFixture.service().depositForCurrentUser(42L, money("100000.00"), null));
         assertMoney("100000.00", frozen.getBalance());
@@ -160,6 +165,7 @@ class LedgerBalanceConsistencyTest {
         when(invalidTransferFixture.accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
         when(invalidTransferFixture.accountRepository.findByAccountNumber("ACC-SENDER"))
                 .thenReturn(Optional.of(sender));
+        when(invalidTransferFixture.accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
         assertThrows(InvalidTransferException.class,
                 () -> invalidTransferFixture.service().transferForCurrentUser(42L, transfer("ACC-SENDER", "1.00"), null));
         verify(invalidTransferFixture.journalRepository, never()).save(any(JournalEntity.class));
@@ -172,6 +178,7 @@ class LedgerBalanceConsistencyTest {
             Fixture fixture = fixture();
             AccountEntity account = account("ACC-INVALID-" + deposit, 1L, "100000.00");
             when(fixture.accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+            when(fixture.accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(account));
 
             assertThrows(IllegalArgumentException.class, () -> {
                 if (deposit) {
@@ -192,6 +199,7 @@ class LedgerBalanceConsistencyTest {
         Fixture fixture = fixture();
         AccountEntity account = account("ACC-REUSE", 1L, "500000.00");
         when(fixture.accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(fixture.accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(account));
         when(fixture.ledgerAccountRepository.findByWalletAccount(account)).thenReturn(Optional.of(walletAccount(account)));
         when(fixture.ledgerAccountRepository.findByCode("SYSTEM_CLEARING")).thenReturn(Optional.of(systemAccount()));
 

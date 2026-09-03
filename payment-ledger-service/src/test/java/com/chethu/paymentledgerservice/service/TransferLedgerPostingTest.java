@@ -46,6 +46,8 @@ class TransferLedgerPostingTest {
         AccountEntity recipient = account("ACC-RECIPIENT", 2L, "50000.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
         when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+        when(accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+        when(accountRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(recipient));
         when(accountRepository.save(any(AccountEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(ledgerAccountRepository.findByWalletAccount(sender)).thenReturn(Optional.of(walletLedger(sender)));
         when(ledgerAccountRepository.findByWalletAccount(recipient)).thenReturn(Optional.of(walletLedger(recipient)));
@@ -103,6 +105,8 @@ class TransferLedgerPostingTest {
         AccountEntity recipient = account("ACC-RECIPIENT", 2L, "0.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
         when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+        when(accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+        when(accountRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(recipient));
         when(accountRepository.save(any(AccountEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(ledgerAccountRepository.findByWalletAccount(sender)).thenReturn(Optional.of(walletLedger(sender)));
         when(ledgerAccountRepository.findByWalletAccount(recipient)).thenReturn(Optional.of(walletLedger(recipient)));
@@ -129,6 +133,8 @@ class TransferLedgerPostingTest {
             setField(sender, "status", status);
             when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
             when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+            when(accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+            when(accountRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(recipient));
             AccountService service = new AccountService(accountRepository,
                     org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
                     ledgerAccountRepository, journalRepository,
@@ -172,6 +178,8 @@ class TransferLedgerPostingTest {
         AccountEntity recipient = account("ACC-RECIPIENT", 2L, "0.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
         when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+        when(accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+        when(accountRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(recipient));
         AccountService service = new AccountService(accountRepository,
                 org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
                 ledgerAccountRepository, journalRepository,
@@ -194,6 +202,8 @@ class TransferLedgerPostingTest {
         AccountEntity recipient = account("ACC-RECIPIENT", 2L, "0.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
         when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+        when(accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+        when(accountRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(recipient));
         when(ledgerAccountRepository.findByWalletAccount(sender)).thenReturn(Optional.of(walletLedger(sender)));
         when(ledgerAccountRepository.findByWalletAccount(recipient)).thenReturn(Optional.of(walletLedger(recipient)));
         when(journalRepository.save(any(JournalEntity.class)))
@@ -218,6 +228,8 @@ class TransferLedgerPostingTest {
         AccountEntity recipient = account("ACC-RECIPIENT", 2L, "0.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
         when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+        when(accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+        when(accountRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(recipient));
         when(accountRepository.save(any(AccountEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(ledgerAccountRepository.findByWalletAccount(sender)).thenReturn(Optional.of(walletLedger(sender)));
         when(ledgerAccountRepository.findByWalletAccount(recipient)).thenReturn(Optional.of(walletLedger(recipient)));

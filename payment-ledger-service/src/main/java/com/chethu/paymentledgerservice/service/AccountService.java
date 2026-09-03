@@ -123,9 +123,10 @@ public class AccountService {
 
     @Transactional
     public AccountResponse depositForCurrentUser(Long userId, MoneyOperationRequest request, String idempotencyKey) {
+        validateMoneyRequest(request);
         AccountEntity account = accountRepository.findByUserId(userId)
                 .orElseThrow(() -> new AccountNotFoundException(userId));
-        validateMoneyRequest(request);
+        account = lockAccount(account);
         IdempotencyRecordEntity existing = idempotencyService.findExisting(account,
                 IdempotencyOperationType.DEPOSIT, idempotencyKey, request.getAmount(), null);
         if (existing != null) {
@@ -171,9 +172,10 @@ public class AccountService {
 
     @Transactional
     public AccountResponse withdrawForCurrentUser(Long userId, MoneyOperationRequest request, String idempotencyKey){
+        validateMoneyRequest(request);
         AccountEntity account = accountRepository.findByUserId(userId)
         .orElseThrow(()->new AccountNotFoundException(userId));
-        validateMoneyRequest(request);
+        account = lockAccount(account);
         IdempotencyRecordEntity existing = idempotencyService.findExisting(account,
                 IdempotencyOperationType.WITHDRAW, idempotencyKey, request.getAmount(), null);
         if (existing != null) {
@@ -208,14 +210,20 @@ public class AccountService {
         validateTransferRequest(request);
         AccountEntity sender = accountRepository.findByUserId(userId)
                 .orElseThrow(() -> new AccountNotFoundException(userId));
+        AccountEntity recipient = accountRepository.findByAccountNumber(request.getRecipientAccountNumber())
+                .orElseThrow(() -> new AccountNotFoundException(request.getRecipientAccountNumber()));
+        if (sender == recipient || (sender.getId() != null && sender.getId().equals(recipient.getId()))) {
+            throw new InvalidTransferException("Sender and receiver account must be different");
+        }
+        AccountPair locked = lockAccounts(sender, recipient);
+        sender = locked.sender();
+        recipient = locked.recipient();
         IdempotencyRecordEntity existing = idempotencyService.findExisting(sender,
                 IdempotencyOperationType.TRANSFER, idempotencyKey, request.getAmount(),
                 request.getRecipientAccountNumber());
         if (existing != null) {
             return replayResponse(sender, existing);
         }
-        AccountEntity recipient = accountRepository.findByAccountNumber(request.getRecipientAccountNumber())
-                .orElseThrow(() -> new AccountNotFoundException(request.getRecipientAccountNumber()));
         ensureAccountActive(sender);
         ensureAccountActive(recipient);
         PostedOperation posted = transferBetweenAccounts(sender, recipient, request);
@@ -228,6 +236,29 @@ public class AccountService {
         if (account.getStatus() != AccountStatus.ACTIVE) {
             throw new AccountNotActiveException();
         }
+    }
+
+    private AccountEntity lockAccount(AccountEntity account) {
+        if (account.getId() == null) {
+            throw new AccountNotFoundException(account.getAccountNumber());
+        }
+        return accountRepository.findByIdForUpdate(account.getId())
+                .orElseThrow(() -> new AccountNotFoundException(account.getId()));
+    }
+
+    private AccountPair lockAccounts(AccountEntity first, AccountEntity second) {
+        Long firstId = first.getId();
+        Long secondId = second.getId();
+        if (firstId == null || secondId == null) {
+            throw new InvalidTransferException("Account identifiers are required for transfer");
+        }
+        Long lowerId = firstId.compareTo(secondId) < 0 ? firstId : secondId;
+        Long higherId = firstId.compareTo(secondId) < 0 ? secondId : firstId;
+        AccountEntity lower = accountRepository.findByIdForUpdate(lowerId)
+                .orElseThrow(() -> new AccountNotFoundException(lowerId));
+        AccountEntity higher = accountRepository.findByIdForUpdate(higherId)
+                .orElseThrow(() -> new AccountNotFoundException(higherId));
+        return firstId.equals(lowerId) ? new AccountPair(lower, higher) : new AccountPair(higher, lower);
     }
 
     private PostedOperation transferBetweenAccounts(AccountEntity sender, AccountEntity recipient,
@@ -269,6 +300,9 @@ public class AccountService {
     }
 
     private record PostedOperation(AccountResponse response, JournalEntity journal) {
+    }
+
+    private record AccountPair(AccountEntity sender, AccountEntity recipient) {
     }
 
     private void validateTransferRequest(TransferRequest request) {

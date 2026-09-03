@@ -43,6 +43,7 @@ class WithdrawLedgerPostingTest {
         TransactionRepository transactionRepository = org.mockito.Mockito.mock(TransactionRepository.class);
         AccountEntity account = account("ACC-100", 42L, "200000.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(account));
         when(accountRepository.save(account)).thenReturn(account);
         LedgerAccountEntity walletLedger = new LedgerAccountEntity("WALLET-ACC-100", LedgerAccountType.WALLET,
                 AccountClass.LIABILITY, account);
@@ -95,6 +96,7 @@ class WithdrawLedgerPostingTest {
         JournalRepository journalRepository = org.mockito.Mockito.mock(JournalRepository.class);
         AccountEntity account = account("ACC-100", 42L, "300000.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(account));
         when(accountRepository.save(account)).thenReturn(account);
         when(ledgerAccountRepository.findByWalletAccount(account)).thenReturn(Optional.of(
                 new LedgerAccountEntity("WALLET-ACC-100", LedgerAccountType.WALLET,
@@ -124,6 +126,7 @@ class WithdrawLedgerPostingTest {
             AccountEntity account = account("ACC-100", 42L, "200000.00");
             setField(account, "status", status);
             when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+            when(accountRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(account));
             AccountService service = new AccountService(accountRepository,
                     org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
                     ledgerAccountRepository, journalRepository,
@@ -144,6 +147,7 @@ class WithdrawLedgerPostingTest {
         JournalRepository journalRepository = org.mockito.Mockito.mock(JournalRepository.class);
         AccountEntity account = account("ACC-100", 42L, "100000.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(account));
         AccountService service = new AccountService(accountRepository,
                 org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
                 ledgerAccountRepository, journalRepository,

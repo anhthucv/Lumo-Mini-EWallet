@@ -154,6 +154,8 @@ class AccountServiceTest {
         AccountEntity recipient = account("ACC-RECIPIENT", "Recipient", 2L, "0.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
         when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+        when(accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+        when(accountRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(recipient));
         when(accountRepository.save(any(AccountEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         AccountResponse response = service.transferForCurrentUser(42L,
@@ -181,6 +183,8 @@ class AccountServiceTest {
         AccountEntity recipient = account("ACC-RECIPIENT", "Recipient", 2L, "0.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
         when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+        when(accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+        when(accountRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(recipient));
         when(accountRepository.save(any(AccountEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "50000.00"), null);
@@ -198,6 +202,8 @@ class AccountServiceTest {
         AccountEntity recipient = account("ACC-RECIPIENT", "Recipient", 2L, "0.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
         when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+        when(accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+        when(accountRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(recipient));
 
         assertThrows(com.chethu.paymentledgerservice.exception.InsufficientBalanceException.class,
                 () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "60000.00"), null));
@@ -264,6 +270,7 @@ class AccountServiceTest {
         AccountEntity account = new AccountEntity("ACC-999999999999", "Nguyen Van A");
         setId(account, 77L);
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdForUpdate(77L)).thenReturn(Optional.of(account));
         when(accountRepository.save(account)).thenReturn(account);
         MoneyOperationRequest request = moneyRequest("100000.00");
 
@@ -284,6 +291,7 @@ class AccountServiceTest {
         AccountService service = service(accountRepository, transactionService, mock(AccountNumberGenerator.class));
         AccountEntity account = new AccountEntity("ACC-999999999999", "Nguyen Van A");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdForUpdate(77L)).thenReturn(Optional.of(account));
 
         assertThrows(IllegalArgumentException.class,
                 () -> service.depositForCurrentUser(42L, moneyRequest("999.99"), null));
@@ -300,6 +308,7 @@ class AccountServiceTest {
         AccountEntity account = account("ACC-FROZEN", "Nguyen Van A", 77L, "100000.00");
         setStatus(account, AccountStatus.FROZEN);
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdForUpdate(77L)).thenReturn(Optional.of(account));
 
         assertThrows(AccountNotActiveException.class,
                 () -> service.depositForCurrentUser(42L, moneyRequest("100000.00"), null));
@@ -317,6 +326,7 @@ class AccountServiceTest {
         AccountEntity account = account("ACC-CLOSED", "Nguyen Van A", 77L, "100000.00");
         setStatus(account, AccountStatus.CLOSED);
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdForUpdate(77L)).thenReturn(Optional.of(account));
 
         assertThrows(AccountNotActiveException.class,
                 () -> service.depositForCurrentUser(42L, moneyRequest("100000.00"), null));
@@ -333,6 +343,7 @@ class AccountServiceTest {
                 mock(AccountNumberGenerator.class));
         AccountEntity account = account("ACC-ACTIVE", "Nguyen Van A", 77L, "200000.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdForUpdate(77L)).thenReturn(Optional.of(account));
         when(accountRepository.save(account)).thenReturn(account);
 
         AccountResponse response = service.withdrawForCurrentUser(42L, moneyRequest("100000.00"), null);
@@ -351,6 +362,7 @@ class AccountServiceTest {
         AccountEntity account = account("ACC-FROZEN", "Nguyen Van A", 77L, "200000.00");
         setStatus(account, AccountStatus.FROZEN);
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdForUpdate(77L)).thenReturn(Optional.of(account));
 
         assertThrows(AccountNotActiveException.class,
                 () -> service.withdrawForCurrentUser(42L, moneyRequest("100000.00"), null));
@@ -368,6 +380,7 @@ class AccountServiceTest {
         AccountEntity account = account("ACC-CLOSED", "Nguyen Van A", 77L, "200000.00");
         setStatus(account, AccountStatus.CLOSED);
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdForUpdate(77L)).thenReturn(Optional.of(account));
 
         assertThrows(AccountNotActiveException.class,
                 () -> service.withdrawForCurrentUser(42L, moneyRequest("100000.00"), null));
@@ -388,6 +401,8 @@ class AccountServiceTest {
             setStatus(sender, inactiveStatus);
             when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
             when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+            when(accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+            when(accountRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(recipient));
 
             assertThrows(AccountNotActiveException.class,
                     () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "100000.00"), null));
@@ -410,6 +425,8 @@ class AccountServiceTest {
             setStatus(recipient, inactiveStatus);
             when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(sender));
             when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
+            when(accountRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sender));
+            when(accountRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(recipient));
 
             assertThrows(AccountNotActiveException.class,
                     () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "100000.00"), null));

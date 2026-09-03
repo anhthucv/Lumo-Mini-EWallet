@@ -42,6 +42,7 @@ class DepositLedgerPostingTest {
         TransactionRepository transactionRepository = org.mockito.Mockito.mock(TransactionRepository.class);
         AccountEntity account = account("ACC-100", 42L, "0.00");
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(account));
         when(accountRepository.save(account)).thenReturn(account);
         when(ledgerAccountRepository.findByWalletAccount(account)).thenReturn(Optional.empty());
         when(ledgerAccountRepository.findByCode("SYSTEM_CLEARING")).thenReturn(Optional.empty());
@@ -94,6 +95,7 @@ class DepositLedgerPostingTest {
         LedgerAccountEntity clearing = new LedgerAccountEntity("SYSTEM_CLEARING", LedgerAccountType.SYSTEM_CLEARING,
                 AccountClass.ASSET, null);
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(account));
         when(accountRepository.save(account)).thenReturn(account);
         when(ledgerAccountRepository.findByWalletAccount(account)).thenReturn(Optional.of(walletLedger));
         when(ledgerAccountRepository.findByCode("SYSTEM_CLEARING")).thenReturn(Optional.of(clearing));
@@ -120,6 +122,7 @@ class DepositLedgerPostingTest {
         AccountEntity account = account("ACC-100", 42L, "100000.00");
         setStatus(account, AccountStatus.FROZEN);
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        when(accountRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(account));
         AccountService service = new AccountService(accountRepository,
                 org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
                 ledgerAccountRepository, journalRepository,

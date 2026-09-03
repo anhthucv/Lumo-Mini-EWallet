@@ -41,6 +41,7 @@ class AccountIdempotencyTest {
         Fixture fixture = fixture();
         AccountEntity account = account("ACC-DEPOSIT", 1L, "500000.00");
         fixture.findByUserIdAnswer(account);
+        fixture.lockedAccountAnswer(account);
         when(fixture.ledgerAccountRepository.findByWalletAccount(account)).thenReturn(Optional.of(wallet(account)));
         when(fixture.ledgerAccountRepository.findByCode("SYSTEM_CLEARING")).thenReturn(Optional.of(system()));
 
@@ -61,6 +62,7 @@ class AccountIdempotencyTest {
         Fixture fixture = fixture();
         AccountEntity account = account("ACC-DEPOSIT", 1L, "500000.00");
         fixture.findByUserIdAnswer(account);
+        fixture.lockedAccountAnswer(account);
         when(fixture.ledgerAccountRepository.findByWalletAccount(account)).thenReturn(Optional.of(wallet(account)));
         when(fixture.ledgerAccountRepository.findByCode("SYSTEM_CLEARING")).thenReturn(Optional.of(system()));
 
@@ -78,6 +80,7 @@ class AccountIdempotencyTest {
         Fixture fixture = fixture();
         AccountEntity account = account("ACC-WITHDRAW", 1L, "150000.00");
         fixture.findByUserIdAnswer(account);
+        fixture.lockedAccountAnswer(account);
         when(fixture.ledgerAccountRepository.findByWalletAccount(account)).thenReturn(Optional.of(wallet(account)));
         when(fixture.ledgerAccountRepository.findByCode("SYSTEM_CLEARING")).thenReturn(Optional.of(system()));
 
@@ -98,6 +101,7 @@ class AccountIdempotencyTest {
         AccountEntity recipient = account("ACC-RECIPIENT", 2L, "50000.00");
         AccountEntity alternateRecipient = account("ACC-OTHER", 3L, "0.00");
         fixture.findByUserIdAnswer(sender);
+        fixture.lockedAccountAnswer(sender, recipient, alternateRecipient);
         when(fixture.accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
         when(fixture.accountRepository.findByAccountNumber("ACC-OTHER")).thenReturn(Optional.of(alternateRecipient));
         when(fixture.ledgerAccountRepository.findByWalletAccount(sender)).thenReturn(Optional.of(wallet(sender)));
@@ -123,6 +127,7 @@ class AccountIdempotencyTest {
         Fixture fixture = fixture();
         AccountEntity account = account("ACC-FAIL", 1L, "500000.00");
         fixture.findByUserIdAnswer(account);
+        fixture.lockedAccountAnswer(account);
         when(fixture.ledgerAccountRepository.findByWalletAccount(account)).thenReturn(Optional.of(wallet(account)));
         when(fixture.ledgerAccountRepository.findByCode("SYSTEM_CLEARING")).thenReturn(Optional.of(system()));
         when(fixture.idempotencyRepository.save(any(IdempotencyRecordEntity.class)))
@@ -206,6 +211,15 @@ class AccountIdempotencyTest {
             IdempotencyRecordRepository idempotencyRepository, List<IdempotencyRecordEntity> records) {
         void findByUserIdAnswer(AccountEntity account) {
             when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
+        }
+
+        void lockedAccountAnswer(AccountEntity... accounts) {
+            when(accountRepository.findByIdForUpdate(any(Long.class))).thenAnswer(invocation -> {
+                Long id = invocation.getArgument(0);
+                return java.util.Arrays.stream(accounts)
+                        .filter(account -> id.equals(account.getId()))
+                        .findFirst();
+            });
         }
 
         AccountService service() {
