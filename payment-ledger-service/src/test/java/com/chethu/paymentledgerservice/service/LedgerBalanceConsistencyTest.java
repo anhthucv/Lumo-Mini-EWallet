@@ -64,7 +64,7 @@ class LedgerBalanceConsistencyTest {
         when(fixture.ledgerAccountRepository.save(any(LedgerAccountEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        AccountResponse response = fixture.service().depositForCurrentUser(42L, money("100000.00"));
+        AccountResponse response = fixture.service().depositForCurrentUser(42L, money("100000.00"), null);
         JournalEntity journal = captureJournal(fixture.journalRepository);
         TransactionEntity transaction = captureTransaction(fixture.transactionRepository);
 
@@ -92,7 +92,7 @@ class LedgerBalanceConsistencyTest {
         when(fixture.ledgerAccountRepository.findByWalletAccount(account)).thenReturn(Optional.of(wallet));
         when(fixture.ledgerAccountRepository.findByCode("SYSTEM_CLEARING")).thenReturn(Optional.of(clearing));
 
-        fixture.service().withdrawForCurrentUser(42L, money("100000.00"));
+        fixture.service().withdrawForCurrentUser(42L, money("100000.00"), null);
         JournalEntity journal = captureJournal(fixture.journalRepository);
         TransactionEntity transaction = captureTransaction(fixture.transactionRepository);
 
@@ -106,7 +106,7 @@ class LedgerBalanceConsistencyTest {
         assertEquals(TransactionType.WITHDRAW, transaction.getTransactionType());
         assertEquals(journal, transaction.getJournal());
 
-        assertThrows(RuntimeException.class, () -> fixture.service().withdrawForCurrentUser(42L, money("1.00")));
+        assertThrows(RuntimeException.class, () -> fixture.service().withdrawForCurrentUser(42L, money("1.00"), null));
         verify(fixture.journalRepository).save(journal);
     }
 
@@ -121,7 +121,7 @@ class LedgerBalanceConsistencyTest {
         when(fixture.ledgerAccountRepository.findByWalletAccount(recipient)).thenReturn(Optional.of(walletAccount(recipient)));
 
         BigDecimal oldTotal = sender.getBalance().add(recipient.getBalance());
-        fixture.service().transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00"));
+        fixture.service().transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00"), null);
         JournalEntity journal = captureJournal(fixture.journalRepository);
         ArgumentCaptor<TransactionEntity> transactionCaptor = ArgumentCaptor.forClass(TransactionEntity.class);
         verify(fixture.transactionRepository, org.mockito.Mockito.times(2)).save(transactionCaptor.capture());
@@ -150,7 +150,7 @@ class LedgerBalanceConsistencyTest {
         setField(frozen, "status", AccountStatus.FROZEN);
         when(frozenFixture.accountRepository.findByUserId(42L)).thenReturn(Optional.of(frozen));
         assertThrows(AccountNotActiveException.class,
-                () -> frozenFixture.service().depositForCurrentUser(42L, money("100000.00")));
+                () -> frozenFixture.service().depositForCurrentUser(42L, money("100000.00"), null));
         assertMoney("100000.00", frozen.getBalance());
         verify(frozenFixture.journalRepository, never()).save(any(JournalEntity.class));
         verify(frozenFixture.transactionRepository, never()).save(any(TransactionEntity.class));
@@ -161,7 +161,7 @@ class LedgerBalanceConsistencyTest {
         when(invalidTransferFixture.accountRepository.findByAccountNumber("ACC-SENDER"))
                 .thenReturn(Optional.of(sender));
         assertThrows(InvalidTransferException.class,
-                () -> invalidTransferFixture.service().transferForCurrentUser(42L, transfer("ACC-SENDER", "1.00")));
+                () -> invalidTransferFixture.service().transferForCurrentUser(42L, transfer("ACC-SENDER", "1.00"), null));
         verify(invalidTransferFixture.journalRepository, never()).save(any(JournalEntity.class));
         verify(invalidTransferFixture.transactionRepository, never()).save(any(TransactionEntity.class));
     }
@@ -175,9 +175,9 @@ class LedgerBalanceConsistencyTest {
 
             assertThrows(IllegalArgumentException.class, () -> {
                 if (deposit) {
-                    fixture.service().depositForCurrentUser(42L, money("0.99"));
+                    fixture.service().depositForCurrentUser(42L, money("0.99"), null);
                 } else {
-                    fixture.service().withdrawForCurrentUser(42L, money("0.99"));
+                    fixture.service().withdrawForCurrentUser(42L, money("0.99"), null);
                 }
             });
 
@@ -195,8 +195,8 @@ class LedgerBalanceConsistencyTest {
         when(fixture.ledgerAccountRepository.findByWalletAccount(account)).thenReturn(Optional.of(walletAccount(account)));
         when(fixture.ledgerAccountRepository.findByCode("SYSTEM_CLEARING")).thenReturn(Optional.of(systemAccount()));
 
-        fixture.service().depositForCurrentUser(42L, money("100000.00"));
-        fixture.service().depositForCurrentUser(42L, money("50000.00"));
+        fixture.service().depositForCurrentUser(42L, money("100000.00"), null);
+        fixture.service().depositForCurrentUser(42L, money("50000.00"), null);
 
         verify(fixture.ledgerAccountRepository, never()).save(any(LedgerAccountEntity.class));
         assertMoney("650000.00", account.getBalance());
@@ -294,7 +294,9 @@ class LedgerBalanceConsistencyTest {
         AccountService service() {
             TransactionService transactionService = new TransactionService(transactionRepository, accountRepository);
             return new AccountService(accountRepository, transactionService,
-                    org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository);
+                    org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository,
+                    new IdempotencyService(org.mockito.Mockito.mock(
+                            com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
         }
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.chethu.paymentledgerservice.domain.TransactionType;
+import com.chethu.paymentledgerservice.domain.IdempotencyOperationType;
 import com.chethu.paymentledgerservice.domain.WalletRules;
 import com.chethu.paymentledgerservice.domain.AccountStatus;
 import com.chethu.paymentledgerservice.domain.AccountClass;
@@ -25,6 +26,7 @@ import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.entity.JournalEntity;
 import com.chethu.paymentledgerservice.entity.LedgerAccountEntity;
 import com.chethu.paymentledgerservice.entity.LedgerEntryEntity;
+import com.chethu.paymentledgerservice.entity.IdempotencyRecordEntity;
 import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
 import com.chethu.paymentledgerservice.exception.AccountNotActiveException;
 import com.chethu.paymentledgerservice.exception.InvalidAccountNumberException;
@@ -40,15 +42,17 @@ public class AccountService {
     private final AccountNumberGenerator accountNumberGenerator;
     private final LedgerAccountRepository ledgerAccountRepository;
     private final JournalRepository journalRepository;
+    private final IdempotencyService idempotencyService;
 
     public AccountService(AccountRepository accountRepository,TransactionService transactionService,
             AccountNumberGenerator accountNumberGenerator, LedgerAccountRepository ledgerAccountRepository,
-            JournalRepository journalRepository){
+            JournalRepository journalRepository, IdempotencyService idempotencyService){
         this.accountRepository=accountRepository;
         this.transactionService = transactionService;
         this.accountNumberGenerator = accountNumberGenerator;
         this.ledgerAccountRepository = ledgerAccountRepository;
         this.journalRepository = journalRepository;
+        this.idempotencyService = idempotencyService;
     }
 
 
@@ -118,18 +122,23 @@ public class AccountService {
     }
 
     @Transactional
-    public AccountResponse depositForCurrentUser(Long userId, MoneyOperationRequest request) {
+    public AccountResponse depositForCurrentUser(Long userId, MoneyOperationRequest request, String idempotencyKey) {
         AccountEntity account = accountRepository.findByUserId(userId)
                 .orElseThrow(() -> new AccountNotFoundException(userId));
+        validateMoneyRequest(request);
+        IdempotencyRecordEntity existing = idempotencyService.findExisting(account,
+                IdempotencyOperationType.DEPOSIT, idempotencyKey, request.getAmount(), null);
+        if (existing != null) {
+            return replayResponse(account, existing);
+        }
         ensureAccountActive(account);
-        return depositToAccount(account, request);
+        PostedOperation posted = depositToAccount(account, request);
+        idempotencyService.saveCompleted(account, IdempotencyOperationType.DEPOSIT, idempotencyKey,
+                request.getAmount(), null, account.getBalance(), posted.journal());
+        return posted.response();
     }
 
-    private AccountResponse depositToAccount(AccountEntity account, MoneyOperationRequest request) {
-        if (request == null || request.getAmount() == null
-                || request.getAmount().compareTo(WalletRules.MINIMUM_OPERATION_AMOUNT) < 0) {
-            throw new IllegalArgumentException("Amount must be at least 1 VNĐ");
-        }
+    private PostedOperation depositToAccount(AccountEntity account, MoneyOperationRequest request) {
         LedgerAccountEntity walletLedgerAccount = resolveWalletLedgerAccount(account);
         LedgerAccountEntity systemClearingAccount = resolveSystemClearingAccount();
         account.deposit(request.getAmount());
@@ -143,7 +152,7 @@ public class AccountService {
         AccountEntity updatedAccount = accountRepository.save(account);
         transactionService.recordTransaction(account, null, TransactionType.DEPOSIT, request.getAmount(),
                 account.getBalance(), journal);
-        return toResponse(updatedAccount);
+        return new PostedOperation(toResponse(updatedAccount), journal);
     }
 
     private LedgerAccountEntity resolveWalletLedgerAccount(AccountEntity account) {
@@ -161,18 +170,23 @@ public class AccountService {
     }
 
     @Transactional
-    public AccountResponse withdrawForCurrentUser(Long userId, MoneyOperationRequest request){
+    public AccountResponse withdrawForCurrentUser(Long userId, MoneyOperationRequest request, String idempotencyKey){
         AccountEntity account = accountRepository.findByUserId(userId)
         .orElseThrow(()->new AccountNotFoundException(userId));
+        validateMoneyRequest(request);
+        IdempotencyRecordEntity existing = idempotencyService.findExisting(account,
+                IdempotencyOperationType.WITHDRAW, idempotencyKey, request.getAmount(), null);
+        if (existing != null) {
+            return replayResponse(account, existing);
+        }
         ensureAccountActive(account);
-        return withdrawFromAccount(account,request);
+        PostedOperation posted = withdrawFromAccount(account,request);
+        idempotencyService.saveCompleted(account, IdempotencyOperationType.WITHDRAW, idempotencyKey,
+                request.getAmount(), null, account.getBalance(), posted.journal());
+        return posted.response();
     }
 
-    private AccountResponse withdrawFromAccount(AccountEntity account, MoneyOperationRequest request){
-        if (request == null || request.getAmount() == null
-                || request.getAmount().compareTo(WalletRules.MINIMUM_OPERATION_AMOUNT) < 0) {
-            throw new IllegalArgumentException("Amount must be at least 1 VNĐ");
-        }
+    private PostedOperation withdrawFromAccount(AccountEntity account, MoneyOperationRequest request){
         LedgerAccountEntity walletLedgerAccount = resolveWalletLedgerAccount(account);
         LedgerAccountEntity systemClearingAccount = resolveSystemClearingAccount();
         account.withdraw(request.getAmount(), WalletRules.MINIMUM_BALANCE);
@@ -186,19 +200,28 @@ public class AccountService {
         AccountEntity updatedAccount = accountRepository.save(account);
         transactionService.recordTransaction(account, null, TransactionType.WITHDRAW, request.getAmount(),
                 account.getBalance(), journal);
-        return toResponse(updatedAccount);
+        return new PostedOperation(toResponse(updatedAccount), journal);
     }
 
     @Transactional
-    public AccountResponse transferForCurrentUser(Long userId, TransferRequest request) {
+    public AccountResponse transferForCurrentUser(Long userId, TransferRequest request, String idempotencyKey) {
         validateTransferRequest(request);
         AccountEntity sender = accountRepository.findByUserId(userId)
                 .orElseThrow(() -> new AccountNotFoundException(userId));
+        IdempotencyRecordEntity existing = idempotencyService.findExisting(sender,
+                IdempotencyOperationType.TRANSFER, idempotencyKey, request.getAmount(),
+                request.getRecipientAccountNumber());
+        if (existing != null) {
+            return replayResponse(sender, existing);
+        }
         AccountEntity recipient = accountRepository.findByAccountNumber(request.getRecipientAccountNumber())
                 .orElseThrow(() -> new AccountNotFoundException(request.getRecipientAccountNumber()));
         ensureAccountActive(sender);
         ensureAccountActive(recipient);
-        return transferBetweenAccounts(sender, recipient, request);
+        PostedOperation posted = transferBetweenAccounts(sender, recipient, request);
+        idempotencyService.saveCompleted(sender, IdempotencyOperationType.TRANSFER, idempotencyKey,
+                request.getAmount(), request.getRecipientAccountNumber(), sender.getBalance(), posted.journal());
+        return posted.response();
     }
 
     private void ensureAccountActive(AccountEntity account) {
@@ -207,7 +230,7 @@ public class AccountService {
         }
     }
 
-    private AccountResponse transferBetweenAccounts(AccountEntity sender, AccountEntity recipient,
+    private PostedOperation transferBetweenAccounts(AccountEntity sender, AccountEntity recipient,
             TransferRequest request) {
         if (sender == recipient || (sender.getId() != null && sender.getId().equals(recipient.getId()))) {
             throw new InvalidTransferException("Sender and receiver account must be different");
@@ -230,7 +253,22 @@ public class AccountService {
                 request.getAmount(), sender.getBalance(), journal);
         transactionService.recordTransaction(recipient, sender, TransactionType.TRANSFER_IN,
                 request.getAmount(), recipient.getBalance(), journal);
-        return toResponse(updatedSender);
+        return new PostedOperation(toResponse(updatedSender), journal);
+    }
+
+    private void validateMoneyRequest(MoneyOperationRequest request) {
+        if (request == null || request.getAmount() == null
+                || request.getAmount().compareTo(WalletRules.MINIMUM_OPERATION_AMOUNT) < 0) {
+            throw new IllegalArgumentException("Amount must be at least 1 VNĐ");
+        }
+    }
+
+    private AccountResponse replayResponse(AccountEntity account, IdempotencyRecordEntity record) {
+        return new AccountResponse(account.getId(), account.getAccountNumber(), account.getOwnerName(),
+                record.getResultBalance(), account.getStatus());
+    }
+
+    private record PostedOperation(AccountResponse response, JournalEntity journal) {
     }
 
     private void validateTransferRequest(TransferRequest request) {

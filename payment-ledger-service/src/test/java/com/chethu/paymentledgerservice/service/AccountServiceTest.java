@@ -157,7 +157,7 @@ class AccountServiceTest {
         when(accountRepository.save(any(AccountEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         AccountResponse response = service.transferForCurrentUser(42L,
-                transferRequest("ACC-RECIPIENT", "100000.00"));
+                transferRequest("ACC-RECIPIENT", "100000.00"), null);
 
         assertEquals(new BigDecimal("100000.00"), response.getBalance());
         assertEquals(new BigDecimal("100000.00"), sender.getBalance());
@@ -183,7 +183,7 @@ class AccountServiceTest {
         when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
         when(accountRepository.save(any(AccountEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "50000.00"));
+        service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "50000.00"), null);
 
         assertEquals(new BigDecimal("50000.00"), sender.getBalance());
     }
@@ -200,7 +200,7 @@ class AccountServiceTest {
         when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
 
         assertThrows(com.chethu.paymentledgerservice.exception.InsufficientBalanceException.class,
-                () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "60000.00")));
+                () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "60000.00"), null));
         assertEquals(new BigDecimal("100000.00"), sender.getBalance());
         verify(accountRepository, never()).save(any(AccountEntity.class));
         verify(transactionService, never()).recordTransaction(any(), any(), any(), any(), any());
@@ -216,7 +216,7 @@ class AccountServiceTest {
         when(accountRepository.findByAccountNumber("ACC-SENDER")).thenReturn(Optional.of(sender));
 
         assertThrows(com.chethu.paymentledgerservice.exception.InvalidTransferException.class,
-                () -> service.transferForCurrentUser(42L, transferRequest("ACC-SENDER", "100000.00")));
+                () -> service.transferForCurrentUser(42L, transferRequest("ACC-SENDER", "100000.00"), null));
     }
 
     @Test
@@ -226,7 +226,7 @@ class AccountServiceTest {
                 mock(AccountNumberGenerator.class));
 
         assertThrows(com.chethu.paymentledgerservice.exception.InvalidTransferException.class,
-                () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "999.99")));
+                () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "999.99"), null));
         verify(accountRepository, never()).findByUserId(any());
     }
 
@@ -240,7 +240,7 @@ class AccountServiceTest {
         when(accountRepository.findByAccountNumber("ACC-MISSING")).thenReturn(Optional.empty());
 
         assertThrows(AccountNotFoundException.class,
-                () -> service.transferForCurrentUser(42L, transferRequest("ACC-MISSING", "100000.00")));
+                () -> service.transferForCurrentUser(42L, transferRequest("ACC-MISSING", "100000.00"), null));
     }
 
     @Test
@@ -257,7 +257,9 @@ class AccountServiceTest {
         when(journalRepository.save(any(JournalEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         AccountService service = new AccountService(accountRepository, transactionService, generator,
-                ledgerAccountRepository, journalRepository);
+                ledgerAccountRepository, journalRepository,
+                new IdempotencyService(org.mockito.Mockito.mock(
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
 
         AccountEntity account = new AccountEntity("ACC-999999999999", "Nguyen Van A");
         setId(account, 77L);
@@ -265,7 +267,7 @@ class AccountServiceTest {
         when(accountRepository.save(account)).thenReturn(account);
         MoneyOperationRequest request = moneyRequest("100000.00");
 
-        AccountResponse response = service.depositForCurrentUser(42L, request);
+        AccountResponse response = service.depositForCurrentUser(42L, request, null);
 
         assertEquals(new BigDecimal("100000.00"), response.getBalance());
         verify(accountRepository).findByUserId(42L);
@@ -284,7 +286,7 @@ class AccountServiceTest {
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
 
         assertThrows(IllegalArgumentException.class,
-                () -> service.depositForCurrentUser(42L, moneyRequest("999.99")));
+                () -> service.depositForCurrentUser(42L, moneyRequest("999.99"), null));
         verify(accountRepository, never()).save(any(AccountEntity.class));
         verify(transactionService, never()).recordTransaction(any(), any(), any(), any(), any());
     }
@@ -300,7 +302,7 @@ class AccountServiceTest {
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
 
         assertThrows(AccountNotActiveException.class,
-                () -> service.depositForCurrentUser(42L, moneyRequest("100000.00")));
+                () -> service.depositForCurrentUser(42L, moneyRequest("100000.00"), null));
         assertEquals(new BigDecimal("100000.00"), account.getBalance());
         verify(accountRepository, never()).save(any(AccountEntity.class));
         verify(transactionService, never()).recordTransaction(any(), any(), any(), any(), any());
@@ -317,7 +319,7 @@ class AccountServiceTest {
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
 
         assertThrows(AccountNotActiveException.class,
-                () -> service.depositForCurrentUser(42L, moneyRequest("100000.00")));
+                () -> service.depositForCurrentUser(42L, moneyRequest("100000.00"), null));
         assertEquals(new BigDecimal("100000.00"), account.getBalance());
         verify(accountRepository, never()).save(any(AccountEntity.class));
         verify(transactionService, never()).recordTransaction(any(), any(), any(), any(), any());
@@ -333,7 +335,7 @@ class AccountServiceTest {
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
         when(accountRepository.save(account)).thenReturn(account);
 
-        AccountResponse response = service.withdrawForCurrentUser(42L, moneyRequest("100000.00"));
+        AccountResponse response = service.withdrawForCurrentUser(42L, moneyRequest("100000.00"), null);
 
         assertEquals(new BigDecimal("100000.00"), response.getBalance());
         verify(transactionService).recordTransaction(eq(account), isNull(), eq(TransactionType.WITHDRAW),
@@ -351,7 +353,7 @@ class AccountServiceTest {
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
 
         assertThrows(AccountNotActiveException.class,
-                () -> service.withdrawForCurrentUser(42L, moneyRequest("100000.00")));
+                () -> service.withdrawForCurrentUser(42L, moneyRequest("100000.00"), null));
         assertEquals(new BigDecimal("200000.00"), account.getBalance());
         verify(accountRepository, never()).save(any(AccountEntity.class));
         verify(transactionService, never()).recordTransaction(any(), any(), any(), any(), any());
@@ -368,7 +370,7 @@ class AccountServiceTest {
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
 
         assertThrows(AccountNotActiveException.class,
-                () -> service.withdrawForCurrentUser(42L, moneyRequest("100000.00")));
+                () -> service.withdrawForCurrentUser(42L, moneyRequest("100000.00"), null));
         assertEquals(new BigDecimal("200000.00"), account.getBalance());
         verify(accountRepository, never()).save(any(AccountEntity.class));
         verify(transactionService, never()).recordTransaction(any(), any(), any(), any(), any());
@@ -388,7 +390,7 @@ class AccountServiceTest {
             when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
 
             assertThrows(AccountNotActiveException.class,
-                    () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "100000.00")));
+                    () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "100000.00"), null));
             assertEquals(new BigDecimal("200000.00"), sender.getBalance());
             assertEquals(new BigDecimal("0.00"), recipient.getBalance());
             verify(accountRepository, never()).save(any(AccountEntity.class));
@@ -410,7 +412,7 @@ class AccountServiceTest {
             when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
 
             assertThrows(AccountNotActiveException.class,
-                    () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "100000.00")));
+                    () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "100000.00"), null));
             assertEquals(new BigDecimal("200000.00"), sender.getBalance());
             assertEquals(new BigDecimal("0.00"), recipient.getBalance());
             verify(accountRepository, never()).save(any(AccountEntity.class));
@@ -426,7 +428,7 @@ class AccountServiceTest {
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.empty());
 
         assertThrows(AccountNotFoundException.class,
-                () -> service.depositForCurrentUser(42L, moneyRequest("100000")));
+                () -> service.depositForCurrentUser(42L, moneyRequest("100000"), null));
         verify(accountRepository, never()).save(any(AccountEntity.class));
         verify(transactionService, never()).recordTransaction(any(), any(), any(), any(), any());
     }
@@ -451,7 +453,9 @@ class AccountServiceTest {
                         AccountClass.ASSET, null)));
         when(journalRepository.save(any(JournalEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         return new AccountService(accountRepository, transactionService, accountNumberGenerator,
-                ledgerAccountRepository, journalRepository);
+                ledgerAccountRepository, journalRepository,
+                new IdempotencyService(org.mockito.Mockito.mock(
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
     }
 
     private TransferRequest transferRequest(String recipientAccountNumber, String amount) {

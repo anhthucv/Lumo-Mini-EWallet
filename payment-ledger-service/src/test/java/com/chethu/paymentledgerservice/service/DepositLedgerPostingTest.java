@@ -52,9 +52,11 @@ class DepositLedgerPostingTest {
 
         TransactionService transactionService = new TransactionService(transactionRepository, accountRepository);
         AccountService service = new AccountService(accountRepository, transactionService,
-                org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository);
+                org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository,
+                new IdempotencyService(org.mockito.Mockito.mock(
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
 
-        AccountResponse response = service.depositForCurrentUser(42L, money("100000.00"));
+        AccountResponse response = service.depositForCurrentUser(42L, money("100000.00"), null);
 
         assertEquals(new BigDecimal("100000.00"), response.getBalance());
         ArgumentCaptor<JournalEntity> journalCaptor = ArgumentCaptor.forClass(JournalEntity.class);
@@ -99,10 +101,12 @@ class DepositLedgerPostingTest {
 
         TransactionService transactionService = new TransactionService(transactionRepository, accountRepository);
         AccountService service = new AccountService(accountRepository, transactionService,
-                org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository);
+                org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository,
+                new IdempotencyService(org.mockito.Mockito.mock(
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
 
-        service.depositForCurrentUser(42L, money("100000.00"));
-        service.depositForCurrentUser(42L, money("50000.00"));
+        service.depositForCurrentUser(42L, money("100000.00"), null);
+        service.depositForCurrentUser(42L, money("50000.00"), null);
 
         verify(ledgerAccountRepository, never()).save(any(LedgerAccountEntity.class));
         assertEquals(new BigDecimal("150000.00"), account.getBalance());
@@ -118,10 +122,12 @@ class DepositLedgerPostingTest {
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
         AccountService service = new AccountService(accountRepository,
                 org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
-                ledgerAccountRepository, journalRepository);
+                ledgerAccountRepository, journalRepository,
+                new IdempotencyService(org.mockito.Mockito.mock(
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
 
         assertThrows(AccountNotActiveException.class,
-                () -> service.depositForCurrentUser(42L, money("100000.00")));
+                () -> service.depositForCurrentUser(42L, money("100000.00"), null));
         assertEquals(new BigDecimal("100000.00"), account.getBalance());
         verify(ledgerAccountRepository, never()).findByWalletAccount(any());
         verify(journalRepository, never()).save(any(JournalEntity.class));

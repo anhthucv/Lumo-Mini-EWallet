@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.chethu.paymentledgerservice.dto.MyWalletResponse;
@@ -50,35 +51,39 @@ public class WalletController {
     @PostMapping("/deposit")
     public ResponseEntity<AccountResponse> deposit(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody MoneyOperationRequest request) {
         if (principal == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
         }
 
-        AccountResponse response = accountService.depositForCurrentUser(principal.userId(), request);
+        AccountResponse response = accountService.depositForCurrentUser(principal.userId(), request, idempotencyKey);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/withdraw")
     public ResponseEntity<AccountResponse> withdraw(
-        @AuthenticationPrincipal AuthenticatedUserPrincipal principal, @Valid @RequestBody MoneyOperationRequest request
+        @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+        @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+        @Valid @RequestBody MoneyOperationRequest request
     ){
         if (principal == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
         }
-        AccountResponse response = accountService.withdrawForCurrentUser(principal.userId(),request);
+        AccountResponse response = accountService.withdrawForCurrentUser(principal.userId(), request, idempotencyKey);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/transfer")
     public ResponseEntity<AccountResponse> transfer(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody TransferRequest request) {
         if (principal == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
         }
 
-        AccountResponse response = accountService.transferForCurrentUser(principal.userId(), request);
+        AccountResponse response = accountService.transferForCurrentUser(principal.userId(), request, idempotencyKey);
         return ResponseEntity.ok(response);
     }
     

@@ -55,9 +55,11 @@ class WithdrawLedgerPostingTest {
         TransactionRepository transactionRepo = transactionRepository;
         TransactionService transactionService = new TransactionService(transactionRepo, accountRepository);
         AccountService service = new AccountService(accountRepository, transactionService,
-                org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository);
+                org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository,
+                new IdempotencyService(org.mockito.Mockito.mock(
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
 
-        AccountResponse response = service.withdrawForCurrentUser(42L, money("100000.00"));
+        AccountResponse response = service.withdrawForCurrentUser(42L, money("100000.00"), null);
 
         assertEquals(new BigDecimal("100000.00"), response.getBalance());
         ArgumentCaptor<JournalEntity> journalCaptor = ArgumentCaptor.forClass(JournalEntity.class);
@@ -103,9 +105,11 @@ class WithdrawLedgerPostingTest {
         when(journalRepository.save(any(JournalEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         AccountService service = new AccountService(accountRepository,
                 org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
-                ledgerAccountRepository, journalRepository);
+                ledgerAccountRepository, journalRepository,
+                new IdempotencyService(org.mockito.Mockito.mock(
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
 
-        service.withdrawForCurrentUser(42L, money("100000.00"));
+        service.withdrawForCurrentUser(42L, money("100000.00"), null);
 
         verify(ledgerAccountRepository, never()).save(any(LedgerAccountEntity.class));
         assertEquals(new BigDecimal("200000.00"), account.getBalance());
@@ -122,10 +126,12 @@ class WithdrawLedgerPostingTest {
             when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
             AccountService service = new AccountService(accountRepository,
                     org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
-                    ledgerAccountRepository, journalRepository);
+                    ledgerAccountRepository, journalRepository,
+                    new IdempotencyService(org.mockito.Mockito.mock(
+                            com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
 
             assertThrows(AccountNotActiveException.class,
-                    () -> service.withdrawForCurrentUser(42L, money("100000.00")));
+                    () -> service.withdrawForCurrentUser(42L, money("100000.00"), null));
             assertEquals(new BigDecimal("200000.00"), account.getBalance());
             verify(journalRepository, never()).save(any(JournalEntity.class));
         }
@@ -140,10 +146,12 @@ class WithdrawLedgerPostingTest {
         when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
         AccountService service = new AccountService(accountRepository,
                 org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
-                ledgerAccountRepository, journalRepository);
+                ledgerAccountRepository, journalRepository,
+                new IdempotencyService(org.mockito.Mockito.mock(
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
 
         assertThrows(RuntimeException.class,
-                () -> service.withdrawForCurrentUser(42L, money("60000.00")));
+                () -> service.withdrawForCurrentUser(42L, money("60000.00"), null));
         assertEquals(new BigDecimal("100000.00"), account.getBalance());
         verify(journalRepository, never()).save(any(JournalEntity.class));
     }
@@ -151,7 +159,8 @@ class WithdrawLedgerPostingTest {
     @Test
     void withdrawForCurrentUser_shouldRemainTransactional() throws Exception {
         assertEquals(Transactional.class,
-                AccountService.class.getMethod("withdrawForCurrentUser", Long.class, MoneyOperationRequest.class)
+                AccountService.class.getMethod("withdrawForCurrentUser", Long.class, MoneyOperationRequest.class,
+                        String.class)
                         .getAnnotation(Transactional.class).annotationType());
     }
 

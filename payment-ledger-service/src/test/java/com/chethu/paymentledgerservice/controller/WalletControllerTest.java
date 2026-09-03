@@ -19,6 +19,7 @@ import com.chethu.paymentledgerservice.dto.RecipientResponse;
 import com.chethu.paymentledgerservice.dto.TransferRequest;
 import com.chethu.paymentledgerservice.repository.JournalRepository;
 import com.chethu.paymentledgerservice.repository.LedgerAccountRepository;
+import com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository;
 import com.chethu.paymentledgerservice.security.AuthenticatedUserPrincipal;
 import com.chethu.paymentledgerservice.service.AccountService;
 
@@ -70,7 +71,7 @@ class WalletControllerTest {
         MoneyOperationRequest request = new MoneyOperationRequest();
         request.setAmount(new BigDecimal("100000.00"));
 
-        AccountResponse response = walletController.deposit(principal, request).getBody();
+        AccountResponse response = walletController.deposit(principal, null, request).getBody();
 
         assertNotNull(response);
         assertEquals(42L, service.depositUserId);
@@ -80,11 +81,12 @@ class WalletControllerTest {
     @Test
     void deposit_shouldNotDeclareClientAccountOrUserId() throws Exception {
         Method method = WalletController.class.getMethod(
-                "deposit", AuthenticatedUserPrincipal.class, MoneyOperationRequest.class);
+                "deposit", AuthenticatedUserPrincipal.class, String.class, MoneyOperationRequest.class);
 
-        assertEquals(2, method.getParameterCount());
+        assertEquals(3, method.getParameterCount());
         assertEquals(AuthenticatedUserPrincipal.class, method.getParameterTypes()[0]);
-        assertEquals(MoneyOperationRequest.class, method.getParameterTypes()[1]);
+        assertEquals(String.class, method.getParameterTypes()[1]);
+        assertEquals(MoneyOperationRequest.class, method.getParameterTypes()[2]);
     }
 
     @Test
@@ -118,7 +120,7 @@ class WalletControllerTest {
         request.setRecipientAccountNumber("ACC-RECIPIENT");
         request.setAmount(new BigDecimal("100000.00"));
 
-        AccountResponse response = walletController.transfer(principal, request).getBody();
+        AccountResponse response = walletController.transfer(principal, null, request).getBody();
 
         assertNotNull(response);
         assertEquals(42L, service.transferUserId);
@@ -129,11 +131,12 @@ class WalletControllerTest {
     @Test
     void transfer_shouldNotDeclareClientSenderIdentifiers() throws Exception {
         Method method = WalletController.class.getMethod(
-                "transfer", AuthenticatedUserPrincipal.class, TransferRequest.class);
+                "transfer", AuthenticatedUserPrincipal.class, String.class, TransferRequest.class);
 
-        assertEquals(2, method.getParameterCount());
+        assertEquals(3, method.getParameterCount());
         assertEquals(AuthenticatedUserPrincipal.class, method.getParameterTypes()[0]);
-        assertEquals(TransferRequest.class, method.getParameterTypes()[1]);
+        assertEquals(String.class, method.getParameterTypes()[1]);
+        assertEquals(TransferRequest.class, method.getParameterTypes()[2]);
         assertThrows(NoSuchMethodException.class,
                 () -> TransferRequest.class.getMethod("getFromAccountId"));
         assertThrows(NoSuchMethodException.class,
@@ -151,7 +154,9 @@ class WalletControllerTest {
         StubAccountService() {
             super(null, null, null,
                     org.mockito.Mockito.mock(LedgerAccountRepository.class),
-                    org.mockito.Mockito.mock(JournalRepository.class));
+                    org.mockito.Mockito.mock(JournalRepository.class),
+                    new com.chethu.paymentledgerservice.service.IdempotencyService(
+                            org.mockito.Mockito.mock(IdempotencyRecordRepository.class)));
         }
 
         @Override
@@ -165,7 +170,7 @@ class WalletControllerTest {
         }
 
         @Override
-        public AccountResponse depositForCurrentUser(Long userId, MoneyOperationRequest request) {
+        public AccountResponse depositForCurrentUser(Long userId, MoneyOperationRequest request, String idempotencyKey) {
             depositUserId = userId;
             depositAmount = request.getAmount();
             return new AccountResponse(100L, "ACC-123456789012", "Nguyen Van A",
@@ -179,7 +184,7 @@ class WalletControllerTest {
         }
 
         @Override
-        public AccountResponse transferForCurrentUser(Long userId, TransferRequest request) {
+        public AccountResponse transferForCurrentUser(Long userId, TransferRequest request, String idempotencyKey) {
             transferUserId = userId;
             transferRecipient = request.getRecipientAccountNumber();
             transferAmount = request.getAmount();

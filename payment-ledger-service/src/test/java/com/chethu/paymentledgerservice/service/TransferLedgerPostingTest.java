@@ -53,9 +53,11 @@ class TransferLedgerPostingTest {
 
         TransactionService transactionService = new TransactionService(transactionRepository, accountRepository);
         AccountService service = new AccountService(accountRepository, transactionService,
-                org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository);
+                org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository,
+                new IdempotencyService(org.mockito.Mockito.mock(
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
 
-        AccountResponse response = service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00"));
+        AccountResponse response = service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00"), null);
 
         assertEquals(new BigDecimal("100000.00"), response.getBalance());
         assertEquals(new BigDecimal("100000.00"), sender.getBalance());
@@ -107,9 +109,11 @@ class TransferLedgerPostingTest {
         when(journalRepository.save(any(JournalEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         AccountService service = new AccountService(accountRepository,
                 org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
-                ledgerAccountRepository, journalRepository);
+                ledgerAccountRepository, journalRepository,
+                new IdempotencyService(org.mockito.Mockito.mock(
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
 
-        service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00"));
+        service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00"), null);
 
         verify(ledgerAccountRepository, never()).save(any(LedgerAccountEntity.class));
     }
@@ -127,10 +131,12 @@ class TransferLedgerPostingTest {
             when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
             AccountService service = new AccountService(accountRepository,
                     org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
-                    ledgerAccountRepository, journalRepository);
+                    ledgerAccountRepository, journalRepository,
+                    new IdempotencyService(org.mockito.Mockito.mock(
+                            com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
 
             assertThrows(AccountNotActiveException.class,
-                    () -> service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00")));
+                    () -> service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00"), null));
             assertEquals(new BigDecimal("200000.00"), sender.getBalance());
             assertEquals(new BigDecimal("0.00"), recipient.getBalance());
             verify(journalRepository, never()).save(any(JournalEntity.class));
@@ -147,10 +153,12 @@ class TransferLedgerPostingTest {
         when(accountRepository.findByAccountNumber("ACC-SENDER")).thenReturn(Optional.of(sender));
         AccountService service = new AccountService(accountRepository,
                 org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
-                ledgerAccountRepository, journalRepository);
+                ledgerAccountRepository, journalRepository,
+                new IdempotencyService(org.mockito.Mockito.mock(
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
 
         assertThrows(InvalidTransferException.class,
-                () -> service.transferForCurrentUser(42L, transfer("ACC-SENDER", "100000.00")));
+                () -> service.transferForCurrentUser(42L, transfer("ACC-SENDER", "100000.00"), null));
         assertEquals(new BigDecimal("200000.00"), sender.getBalance());
         verify(journalRepository, never()).save(any(JournalEntity.class));
     }
@@ -166,10 +174,12 @@ class TransferLedgerPostingTest {
         when(accountRepository.findByAccountNumber("ACC-RECIPIENT")).thenReturn(Optional.of(recipient));
         AccountService service = new AccountService(accountRepository,
                 org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
-                ledgerAccountRepository, journalRepository);
+                ledgerAccountRepository, journalRepository,
+                new IdempotencyService(org.mockito.Mockito.mock(
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
 
         assertThrows(RuntimeException.class,
-                () -> service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "60000.00")));
+                () -> service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "60000.00"), null));
         assertEquals(new BigDecimal("100000.00"), sender.getBalance());
         assertEquals(new BigDecimal("0.00"), recipient.getBalance());
         verify(journalRepository, never()).save(any(JournalEntity.class));
@@ -190,10 +200,12 @@ class TransferLedgerPostingTest {
                 .thenThrow(new IllegalStateException("ledger persistence failed"));
         AccountService service = new AccountService(accountRepository,
                 org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
-                ledgerAccountRepository, journalRepository);
+                ledgerAccountRepository, journalRepository,
+                new IdempotencyService(org.mockito.Mockito.mock(
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
 
         assertThrows(IllegalStateException.class,
-                () -> service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00")));
+                () -> service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00"), null));
     }
 
     @Test
@@ -214,16 +226,19 @@ class TransferLedgerPostingTest {
                 .thenThrow(new IllegalStateException("transaction persistence failed"));
         TransactionService transactionService = new TransactionService(transactionRepository, accountRepository);
         AccountService service = new AccountService(accountRepository, transactionService,
-                org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository);
+                org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository,
+                new IdempotencyService(org.mockito.Mockito.mock(
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
 
         assertThrows(IllegalStateException.class,
-                () -> service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00")));
+                () -> service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00"), null));
     }
 
     @Test
     void transferForCurrentUser_shouldRemainTransactional() throws Exception {
         assertEquals(Transactional.class,
-                AccountService.class.getMethod("transferForCurrentUser", Long.class, TransferRequest.class)
+                AccountService.class.getMethod("transferForCurrentUser", Long.class, TransferRequest.class,
+                        String.class)
                         .getAnnotation(Transactional.class).annotationType());
     }
 
