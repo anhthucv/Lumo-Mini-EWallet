@@ -18,20 +18,22 @@ export function getMyWallet(signal?: AbortSignal): Promise<MyWalletResponse> {
   });
 }
 
-export function deposit(amount: number, signal?: AbortSignal): Promise<DepositResponse> {
+export function deposit(amount: number, idempotencyKey: string, signal?: AbortSignal): Promise<DepositResponse> {
   const request: DepositRequest = { amount };
   return requestJson<DepositResponse>('/wallet/deposit', {
     method: 'POST',
     body: JSON.stringify(request),
+    headers: { 'Idempotency-Key': idempotencyKey },
     signal,
   });
 }
 
-export function withdraw(amount: number, signal?: AbortSignal): Promise<DepositResponse> {
+export function withdraw(amount: number, idempotencyKey: string, signal?: AbortSignal): Promise<DepositResponse> {
   const request: DepositRequest = { amount };
   return requestJson<DepositResponse>('/wallet/withdraw', {
     method: 'POST',
     body: JSON.stringify(request),
+    headers: { 'Idempotency-Key': idempotencyKey },
     signal,
   });
 }
@@ -47,12 +49,14 @@ export function getRecipient(accountNumber: string, signal?: AbortSignal): Promi
 export function transfer(
   recipientAccountNumber: string,
   amount: number,
+  idempotencyKey: string,
   signal?: AbortSignal,
 ): Promise<TransferResponse> {
   const request: TransferRequest = { recipientAccountNumber, amount };
   return requestJson<TransferResponse>('/wallet/transfer', {
     method: 'POST',
     body: JSON.stringify(request),
+    headers: { 'Idempotency-Key': idempotencyKey },
     signal,
   });
 }

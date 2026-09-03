@@ -1,7 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError } from '../api/http';
+import { getOrCreateIdempotencyAttempt, type IdempotencyAttempt } from '../api/idempotency';
 import { deposit, getMyWallet, getRecipient, getTransaction, getTransactions, transfer, withdraw } from '../api/walletApi';
 import { useAuth } from '../auth/AuthContext';
 import type {
@@ -199,6 +200,9 @@ export default function WalletPage() {
   const [selectedTransaction, setSelectedTransaction] = useState<TransactionResponse | null>(null);
   const [transactionDetailLoading, setTransactionDetailLoading] = useState(false);
   const [transactionDetailError, setTransactionDetailError] = useState<string | null>(null);
+  const depositAttempt = useRef<IdempotencyAttempt | null>(null);
+  const withdrawAttempt = useRef<IdempotencyAttempt | null>(null);
+  const transferAttempt = useRef<IdempotencyAttempt | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -331,20 +335,27 @@ export default function WalletPage() {
       return;
     }
 
+    const attempt = getOrCreateIdempotencyAttempt(depositAttempt.current, String(numericAmount));
+    depositAttempt.current = attempt;
     setDepositing(true);
     try {
-      const response = await deposit(numericAmount);
+      const response = await deposit(numericAmount, attempt.key);
       setWallet((currentWallet) => currentWallet && toWalletResponse(currentWallet, response));
       setAmount('');
+      depositAttempt.current = null;
       setDepositSuccess(
         `Deposited ${formatBalance(numericAmount)}. Updated balance: ${formatBalance(response.balance)}.`,
       );
       setHistoryRefreshKey((key) => key + 1);
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {
+        depositAttempt.current = null;
         logout();
         navigate('/login', { replace: true });
         return;
+      }
+      if (requestError instanceof ApiError) {
+        depositAttempt.current = null;
       }
       setDepositError(getDepositErrorMessage(requestError));
     } finally {
@@ -367,20 +378,27 @@ export default function WalletPage() {
       return;
     }
 
+    const attempt = getOrCreateIdempotencyAttempt(withdrawAttempt.current, String(numericAmount));
+    withdrawAttempt.current = attempt;
     setWithdrawing(true);
     try {
-      const response = await withdraw(numericAmount);
+      const response = await withdraw(numericAmount, attempt.key);
       setWallet((currentWallet) => currentWallet && toWalletResponse(currentWallet, response));
       setWithdrawAmount('');
+      withdrawAttempt.current = null;
       setWithdrawSuccess(
         `Withdrew ${formatBalance(numericAmount)}. Updated balance: ${formatBalance(response.balance)}.`,
       );
       setHistoryRefreshKey((key) => key + 1);
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {
+        withdrawAttempt.current = null;
         logout();
         navigate('/login', { replace: true });
         return;
+      }
+      if (requestError instanceof ApiError) {
+        withdrawAttempt.current = null;
       }
       setWithdrawError(getWithdrawErrorMessage(requestError));
     } finally {
@@ -389,6 +407,7 @@ export default function WalletPage() {
   }
 
   function handleRecipientChange(value: string) {
+    transferAttempt.current = null;
     setRecipientAccountNumber(value);
     setRecipient(null);
     setRecipientError(null);
@@ -465,22 +484,33 @@ export default function WalletPage() {
       return;
     }
 
+    const payload = JSON.stringify({
+      recipientAccountNumber: recipient.accountNumber,
+      amount: numericAmount,
+    });
+    const attempt = getOrCreateIdempotencyAttempt(transferAttempt.current, payload);
+    transferAttempt.current = attempt;
     setTransferring(true);
     try {
-      const response = await transfer(recipient.accountNumber, numericAmount);
+      const response = await transfer(recipient.accountNumber, numericAmount, attempt.key);
       setWallet((currentWallet) => currentWallet && toWalletResponse(currentWallet, response));
       setRecipientAccountNumber('');
       setTransferAmount('');
       setRecipient(null);
+      transferAttempt.current = null;
       setTransferSuccess(
         `Transferred ${formatBalance(numericAmount)} to ${response.accountNumber}. Updated balance: ${formatBalance(response.balance)}.`,
       );
       setHistoryRefreshKey((key) => key + 1);
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {
+        transferAttempt.current = null;
         logout();
         navigate('/login', { replace: true });
         return;
+      }
+      if (requestError instanceof ApiError) {
+        transferAttempt.current = null;
       }
       setTransferError(getTransferErrorMessage(requestError));
     } finally {
@@ -575,7 +605,10 @@ export default function WalletPage() {
                   min="1000"
                   step="1"
                   value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
+                  onChange={(event) => {
+                    depositAttempt.current = null;
+                    setAmount(event.target.value);
+                  }}
                   placeholder="100,000"
                   disabled={depositing}
                 />
@@ -604,7 +637,10 @@ export default function WalletPage() {
                   min="1000"
                   step="1"
                   value={withdrawAmount}
-                  onChange={(event) => setWithdrawAmount(event.target.value)}
+                  onChange={(event) => {
+                    withdrawAttempt.current = null;
+                    setWithdrawAmount(event.target.value);
+                  }}
                   placeholder="100,000"
                   disabled={withdrawing}
                 />
@@ -659,6 +695,7 @@ export default function WalletPage() {
                     step="1"
                     value={transferAmount}
                     onChange={(event) => {
+                      transferAttempt.current = null;
                       setTransferAmount(event.target.value);
                       setTransferError(null);
                       setTransferSuccess(null);
