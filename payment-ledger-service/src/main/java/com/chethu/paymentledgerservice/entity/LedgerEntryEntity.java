@@ -17,9 +17,11 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.Check;
 
 @Entity
 @Table(name = "ledger_entries")
+@Check(name = "ck_ledger_entries_amount_positive", constraints = "amount > 0")
 public class LedgerEntryEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

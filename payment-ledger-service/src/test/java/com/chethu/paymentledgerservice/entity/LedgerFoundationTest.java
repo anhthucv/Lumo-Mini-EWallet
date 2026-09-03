@@ -16,6 +16,9 @@ import com.chethu.paymentledgerservice.domain.LedgerEntryType;
 
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
+import org.hibernate.annotations.Check;
 
 class LedgerFoundationTest {
     private final AccountEntity wallet = new AccountEntity("ACC-WALLET", "Wallet Owner");
@@ -100,5 +103,20 @@ class LedgerFoundationTest {
 
         assertEquals(EnumType.STRING, transactionStatus.getAnnotation(Enumerated.class).value());
         assertEquals(EnumType.STRING, entryType.getAnnotation(Enumerated.class).value());
+    }
+
+    @Test
+    void schemaMappings_shouldKeepFinancialInvariantsAndHistoryIndex() {
+        Check accountCheck = AccountEntity.class.getAnnotation(Check.class);
+        Check transactionCheck = TransactionEntity.class.getAnnotation(Check.class);
+        Check ledgerEntryCheck = LedgerEntryEntity.class.getAnnotation(Check.class);
+
+        assertEquals("balance >= 0", accountCheck.constraints());
+        assertEquals("amount > 0", transactionCheck.constraints());
+        assertEquals("amount > 0", ledgerEntryCheck.constraints());
+
+        Index historyIndex = TransactionEntity.class.getAnnotation(Table.class).indexes()[0];
+        assertEquals("idx_transactions_account_created_at", historyIndex.name());
+        assertEquals("account_id, created_at", historyIndex.columnList());
     }
 }
