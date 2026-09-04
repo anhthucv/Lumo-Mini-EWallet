@@ -9,7 +9,6 @@ import {
   deposit,
   getMyWallet,
   getRecipient,
-  getTransaction,
   getTransactions,
   getWalletLimits,
   transfer,
@@ -23,9 +22,7 @@ import type {
   DepositResponse,
   MyWalletResponse,
   RecipientResponse,
-  TransactionFilters,
   TransactionResponse,
-  TransactionType,
   TransactionLimit,
   WalletLimitsResponse,
 } from '../types/wallet';
@@ -89,7 +86,7 @@ function getDepositErrorMessage(error: unknown): string {
     return 'This deposit exceeds the remaining daily limit.';
   }
   if (error instanceof ApiError && error.status === 400) {
-    return error.message || 'Enter a valid deposit amount of at least 1 VND.';
+    return error.message || 'Enter a valid deposit amount of at least 1,000 ₫.';
   }
   if (error instanceof ApiError && error.status === 404) {
     return 'Your wallet could not be found. Please try again later.';
@@ -157,45 +154,6 @@ function getTransferErrorMessage(error: unknown): string {
   return 'The server could not be reached. Please check your connection and try again.';
 }
 
-function getHistoryErrorMessage(error: unknown): string {
-  if (error instanceof ApiError && error.status === 403) {
-    return 'You do not have permission to view transaction history.';
-  }
-  if (error instanceof ApiError) {
-    return 'Transaction history could not be loaded. Please try again.';
-  }
-  return 'The server could not be reached. Please check your connection and try again.';
-}
-
-function getTransactionDetailErrorMessage(error: unknown): string {
-  if (error instanceof ApiError && error.status === 404) {
-    return 'Transaction could not be found.';
-  }
-  if (error instanceof ApiError) {
-    return 'Transaction details could not be loaded. Please try again.';
-  }
-  return 'The server could not be reached. Please check your connection and try again.';
-}
-
-function validateTransactionFilters(filters: TransactionFilters): string | null {
-  if (filters.fromDate && filters.toDate && filters.fromDate > filters.toDate) {
-    return 'From date must be before or equal to To date.';
-  }
-
-  const minAmount = filters.minAmount ? Number(filters.minAmount) : null;
-  const maxAmount = filters.maxAmount ? Number(filters.maxAmount) : null;
-  if (filters.minAmount && (minAmount === null || !Number.isFinite(minAmount) || minAmount < 0)) {
-    return 'Minimum amount must be a non-negative number.';
-  }
-  if (filters.maxAmount && (maxAmount === null || !Number.isFinite(maxAmount) || maxAmount < 0)) {
-    return 'Maximum amount must be a non-negative number.';
-  }
-  if (minAmount !== null && maxAmount !== null && minAmount > maxAmount) {
-    return 'Minimum amount must be less than or equal to maximum amount.';
-  }
-  return null;
-}
-
 function toWalletResponse(wallet: MyWalletResponse, response: DepositResponse): MyWalletResponse {
   return {
     ...wallet,
@@ -248,22 +206,11 @@ export default function WalletPage() {
   const [transferSuccess, setTransferSuccess] = useState<string | null>(null);
   const [transferring, setTransferring] = useState(false);
   const [history, setHistory] = useState<TransactionResponse[]>([]);
-  const [historyPage, setHistoryPage] = useState(0);
-  const [historyTotalPages, setHistoryTotalPages] = useState(0);
   const [historyTotalElements, setHistoryTotalElements] = useState(0);
-  const [historyFirst, setHistoryFirst] = useState(true);
-  const [historyLast, setHistoryLast] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [beneficiariesRetryKey, setBeneficiariesRetryKey] = useState(0);
-  const [draftFilters, setDraftFilters] = useState<TransactionFilters>({});
-  const [activeFilters, setActiveFilters] = useState<TransactionFilters>({});
-  const [filterError, setFilterError] = useState<string | null>(null);
-  const [selectedTransactionId, setSelectedTransactionId] = useState<number | null>(null);
-  const [selectedTransaction, setSelectedTransaction] = useState<TransactionResponse | null>(null);
-  const [transactionDetailLoading, setTransactionDetailLoading] = useState(false);
-  const [transactionDetailError, setTransactionDetailError] = useState<string | null>(null);
   const depositAttempt = useRef<IdempotencyAttempt | null>(null);
   const withdrawAttempt = useRef<IdempotencyAttempt | null>(null);
   const transferAttempt = useRef<IdempotencyAttempt | null>(null);
@@ -362,17 +309,13 @@ export default function WalletPage() {
 
       try {
         const response = await getTransactions({
-          ...activeFilters,
-          page: historyPage,
-          size: 10,
+          page: 0,
+          size: 5,
           sort: 'createdAt,desc',
           signal: controller.signal,
         });
         setHistory(response.content);
-        setHistoryTotalPages(response.totalPages);
         setHistoryTotalElements(response.totalElements);
-        setHistoryFirst(response.first);
-        setHistoryLast(response.last);
       } catch (requestError) {
         if (controller.signal.aborted) {
           return;
@@ -382,7 +325,7 @@ export default function WalletPage() {
           navigate('/login', { replace: true });
           return;
         }
-        setHistoryError(getHistoryErrorMessage(requestError));
+        setHistoryError('Recent activity could not be loaded. Please try again.');
       } finally {
         if (!controller.signal.aborted) {
           setHistoryLoading(false);
@@ -393,46 +336,7 @@ export default function WalletPage() {
     void loadHistory();
 
     return () => controller.abort();
-  }, [activeFilters, historyPage, historyRefreshKey, logout, navigate]);
-
-  useEffect(() => {
-    if (selectedTransactionId === null) {
-      setSelectedTransaction(null);
-      setTransactionDetailError(null);
-      return;
-    }
-    const transactionId = selectedTransactionId;
-
-    const controller = new AbortController();
-
-    async function loadTransactionDetail() {
-      setTransactionDetailLoading(true);
-      setSelectedTransaction(null);
-      setTransactionDetailError(null);
-
-      try {
-        setSelectedTransaction(await getTransaction(transactionId, controller.signal));
-      } catch (requestError) {
-        if (controller.signal.aborted) {
-          return;
-        }
-        if (requestError instanceof ApiError && requestError.status === 401) {
-          logout();
-          navigate('/login', { replace: true });
-          return;
-        }
-        setTransactionDetailError(getTransactionDetailErrorMessage(requestError));
-      } finally {
-        if (!controller.signal.aborted) {
-          setTransactionDetailLoading(false);
-        }
-      }
-    }
-
-    void loadTransactionDetail();
-
-    return () => controller.abort();
-  }, [logout, navigate, selectedTransactionId]);
+  }, [historyRefreshKey, logout, navigate]);
 
   async function handleDeposit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -445,7 +349,7 @@ export default function WalletPage() {
       return;
     }
     if (numericAmount < 1000) {
-      setDepositError('The minimum deposit is 1 VND.');
+      setDepositError('The minimum deposit is 1,000 ₫.');
       return;
     }
     if (limits) {
@@ -496,7 +400,7 @@ export default function WalletPage() {
       return;
     }
     if (numericAmount < 1000) {
-      setWithdrawError('The minimum withdrawal is 1 VND.');
+      setWithdrawError('The minimum withdrawal is 1,000 ₫.');
       return;
     }
     if (limits) {
@@ -544,24 +448,6 @@ export default function WalletPage() {
     setRecipientError(null);
     setTransferError(null);
     setTransferSuccess(null);
-  }
-
-  function applyFilters(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const errorMessage = validateTransactionFilters(draftFilters);
-    setFilterError(errorMessage);
-    if (errorMessage) {
-      return;
-    }
-    setActiveFilters({ ...draftFilters });
-    setHistoryPage(0);
-  }
-
-  function resetFilters() {
-    setDraftFilters({});
-    setActiveFilters({});
-    setFilterError(null);
-    setHistoryPage(0);
   }
 
   async function lookupRecipient(accountNumberInput = recipientAccountNumber) {
@@ -627,7 +513,7 @@ export default function WalletPage() {
       return;
     }
     if (numericAmount < 1000) {
-      setTransferError('The minimum transfer is 1 VND.');
+      setTransferError('The minimum transfer is 1,000 ₫.');
       return;
     }
     if (limits) {
@@ -685,7 +571,7 @@ export default function WalletPage() {
           <nav className="dashboard-nav" aria-label="Wallet navigation">
             <Link to="/dashboard">Home</Link>
             <Link className="active" to="/wallet">Wallet</Link>
-            <Link to="/notifications">Activity</Link>
+            <Link to="/activity">Activity</Link>
             <Link to="/beneficiaries">People</Link>
           </nav>
           <div className="dashboard-header-actions">
@@ -937,216 +823,50 @@ export default function WalletPage() {
             </section>
             </div>
             </div>
-            <details className="wallet-history-disclosure">
-              <summary>View transaction history</summary>
-            <section className="history-panel" aria-labelledby="history-title">
-              <div className="history-heading">
+            <section className="wallet-recent-activity" aria-labelledby="recent-activity-title">
+              <div className="wallet-recent-heading">
                 <div>
-                  <span className="deposit-kicker">Ledger activity</span>
-                  <h2 id="history-title">Transaction history</h2>
+                  <span className="wallet-recent-kicker">Activity</span>
+                  <h2 id="recent-activity-title">Recent activity</h2>
+                  <p>Your latest wallet movements</p>
                 </div>
-                <span className="history-count">
-                  {historyTotalElements} {historyTotalElements === 1 ? 'transaction' : 'transactions'}
-                </span>
+                <div className="wallet-recent-heading-action">
+                  <span>{historyTotalElements} {historyTotalElements === 1 ? 'transaction' : 'transactions'}</span>
+                  <Link to="/activity">View all activity <span aria-hidden="true">→</span></Link>
+                </div>
               </div>
-              <form className="history-filters" onSubmit={applyFilters} noValidate>
-                <div className="history-filter-grid">
-                  <label className="field-group" htmlFor="transaction-type">
-                    <span className="field-label">Transaction type</span>
-                    <select
-                      id="transaction-type"
-                      className="input"
-                      value={draftFilters.type ?? ''}
-                      onChange={(event) => setDraftFilters((filters) => ({
-                        ...filters,
-                        type: event.target.value ? event.target.value as TransactionType : undefined,
-                      }))}
-                      disabled={historyLoading}
-                    >
-                      <option value="">All</option>
-                      <option value="DEPOSIT">Deposit</option>
-                      <option value="WITHDRAW">Withdraw</option>
-                      <option value="TRANSFER_IN">Transfer received</option>
-                      <option value="TRANSFER_OUT">Transfer sent</option>
-                    </select>
-                  </label>
-                  <label className="field-group" htmlFor="history-from-date">
-                    <span className="field-label">From date</span>
-                    <input
-                      id="history-from-date"
-                      className="input"
-                      type="date"
-                      value={draftFilters.fromDate ?? ''}
-                      onChange={(event) => setDraftFilters((filters) => ({ ...filters, fromDate: event.target.value || undefined }))}
-                      disabled={historyLoading}
-                    />
-                  </label>
-                  <label className="field-group" htmlFor="history-to-date">
-                    <span className="field-label">To date</span>
-                    <input
-                      id="history-to-date"
-                      className="input"
-                      type="date"
-                      value={draftFilters.toDate ?? ''}
-                      onChange={(event) => setDraftFilters((filters) => ({ ...filters, toDate: event.target.value || undefined }))}
-                      disabled={historyLoading}
-                    />
-                  </label>
-                  <label className="field-group" htmlFor="history-min-amount">
-                    <span className="field-label">Minimum amount</span>
-                    <input
-                      id="history-min-amount"
-                      className="input"
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={draftFilters.minAmount ?? ''}
-                      onChange={(event) => setDraftFilters((filters) => ({ ...filters, minAmount: event.target.value || undefined }))}
-                      placeholder="0"
-                      disabled={historyLoading}
-                    />
-                  </label>
-                  <label className="field-group" htmlFor="history-max-amount">
-                    <span className="field-label">Maximum amount</span>
-                    <input
-                      id="history-max-amount"
-                      className="input"
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={draftFilters.maxAmount ?? ''}
-                      onChange={(event) => setDraftFilters((filters) => ({ ...filters, maxAmount: event.target.value || undefined }))}
-                      placeholder="500,000"
-                      disabled={historyLoading}
-                    />
-                  </label>
-                </div>
-                {filterError && <div className="banner error" role="alert">{filterError}</div>}
-                <div className="history-filter-actions">
-                  <button type="submit" className="primary-button" disabled={historyLoading}>Apply filters</button>
-                  <button type="button" className="secondary-button" onClick={resetFilters} disabled={historyLoading}>Reset filters</button>
-                </div>
-              </form>
-              {historyLoading && (
-                <div className="history-state" role="status" aria-live="polite">
-                  <span className="loading-dot" aria-hidden="true" />
-                  Loading transaction history...
-                </div>
-              )}
-              {!historyLoading && historyError && (
-                <div className="history-state history-error" role="alert">
-                  <span>{historyError}</span>
-                  <button type="button" className="secondary-button" onClick={() => setHistoryRefreshKey((key) => key + 1)}>
-                    Try again
-                  </button>
-                </div>
-              )}
+              {historyLoading && <div className="wallet-recent-state" role="status">Loading recent activity...</div>}
+              {!historyLoading && historyError && <div className="wallet-recent-state wallet-recent-error" role="alert">{historyError}</div>}
               {!historyLoading && !historyError && history.length === 0 && (
-                <div className="history-state" role="status">
-                  {Object.values(activeFilters).some(Boolean)
-                    ? 'No transactions match these filters.'
-                    : 'No transactions yet.'}
+                <div className="wallet-recent-empty">
+                  <span className="wallet-recent-empty-icon" aria-hidden="true">+</span>
+                  <strong>No activity yet</strong>
+                  <p>Your deposits, transfers, and withdrawals will appear here.</p>
                 </div>
               )}
               {!historyLoading && !historyError && history.length > 0 && (
-                <>
-                  <div className="transaction-list" role="list" aria-label="Transaction history">
-                    {history.map((transaction) => {
-                      const incoming = transaction.transactionType === 'DEPOSIT'
-                        || transaction.transactionType === 'TRANSFER_IN';
-                      return (
-                        <article className="transaction-row" role="listitem" key={transaction.id}>
-                          <div className="transaction-main">
-                            <span className={`transaction-direction ${incoming ? 'incoming' : 'outgoing'}`}>
-                              {incoming ? '+' : '-'}
-                            </span>
-                            <div>
-                              <strong>{formatTransactionType(transaction.transactionType)}</strong>
-                              <small>{formatTransactionDate(transaction.createdAt)}</small>
-                            </div>
-                          </div>
-                          <div className="transaction-values">
-                            <strong className={incoming ? 'incoming-text' : 'outgoing-text'}>
-                              {incoming ? '+' : '-'}{formatBalance(transaction.amount)}
-                            </strong>
-                            <small>Balance after: {formatBalance(transaction.balanceAfterTransaction)}</small>
-                          </div>
-                          <span className="transaction-related">
-                            {transaction.relatedAccountId === null
-                              ? 'This wallet'
-                              : `Related account #${transaction.relatedAccountId}`}
-                          </span>
-                          <button
-                            type="button"
-                            className="secondary-button transaction-detail-button"
-                            onClick={() => setSelectedTransactionId(transaction.id)}
-                          >
-                            View details
-                          </button>
-                        </article>
-                      );
-                    })}
-                  </div>
-                  <div className="history-pagination" aria-label="Transaction history pagination">
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      disabled={historyFirst || historyPage === 0 || historyLoading}
-                      onClick={() => setHistoryPage((page) => Math.max(0, page - 1))}
-                    >
-                      Previous
-                    </button>
-                    <span>Page {historyPage + 1} of {Math.max(historyTotalPages, 1)}</span>
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      disabled={historyLast || historyLoading || historyPage + 1 >= historyTotalPages}
-                      onClick={() => setHistoryPage((page) => page + 1)}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </>
-              )}
-              {selectedTransactionId !== null && (
-                <section className="transaction-detail" aria-labelledby="transaction-detail-title">
-                  <div className="history-heading">
-                    <div>
-                      <span className="deposit-kicker">Transaction detail</span>
-                      <h3 id="transaction-detail-title">Transaction #{selectedTransactionId}</h3>
-                    </div>
-                    <button type="button" className="secondary-button" onClick={() => setSelectedTransactionId(null)}>
-                      Close
-                    </button>
-                  </div>
-                  {transactionDetailLoading && (
-                    <div className="history-state" role="status" aria-live="polite">
-                      <span className="loading-dot" aria-hidden="true" />
-                      Loading transaction details...
-                    </div>
-                  )}
-                  {!transactionDetailLoading && transactionDetailError && (
-                    <div className="history-state history-error" role="alert">{transactionDetailError}</div>
-                  )}
-                  {!transactionDetailLoading && !transactionDetailError && selectedTransaction && (
-                    <dl className="transaction-detail-grid">
-                      <div><dt>Transaction ID</dt><dd>{selectedTransaction.id}</dd></div>
-                      <div><dt>Type</dt><dd>{formatTransactionType(selectedTransaction.transactionType)}</dd></div>
-                      <div><dt>Amount</dt><dd>{formatBalance(selectedTransaction.amount)}</dd></div>
-                      <div><dt>Date</dt><dd>{formatTransactionDate(selectedTransaction.createdAt)}</dd></div>
-                      <div><dt>Balance after</dt><dd>{formatBalance(selectedTransaction.balanceAfterTransaction)}</dd></div>
-                      <div>
-                        <dt>Related account</dt>
-                        <dd>{selectedTransaction.relatedAccountId === null
-                          ? 'This wallet'
-                          : `Related account #${selectedTransaction.relatedAccountId}`}</dd>
-                      </div>
-                    </dl>
-                  )}
-                </section>
+                <div className="wallet-recent-list" role="list" aria-label="Recent wallet activity">
+                  {history.map((transaction) => {
+                    const incoming = transaction.transactionType === 'DEPOSIT'
+                      || transaction.transactionType === 'TRANSFER_IN';
+                    return (
+                      <article className="wallet-recent-row" role="listitem" key={transaction.id}>
+                        <span className={`wallet-recent-icon ${incoming ? 'incoming' : 'outgoing'}`} aria-hidden="true">
+                          {incoming ? '↙' : '↗'}
+                        </span>
+                        <div className="wallet-recent-copy">
+                          <strong>{formatTransactionType(transaction.transactionType)}</strong>
+                          <small>{formatTransactionDate(transaction.createdAt)}</small>
+                        </div>
+                        <strong className={`wallet-recent-amount ${incoming ? 'incoming' : 'outgoing'}`}>
+                          {incoming ? '+' : '-'}{formatBalance(transaction.amount)}
+                        </strong>
+                      </article>
+                    );
+                  })}
+                </div>
               )}
             </section>
-            </details>
           </div>
         )}
       </section>
