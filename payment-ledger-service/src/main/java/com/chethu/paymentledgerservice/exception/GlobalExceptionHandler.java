@@ -63,6 +63,18 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(BeneficiaryNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleBeneficiaryNotFound(BeneficiaryNotFoundException ex,
+            HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "BENEFICIARY_NOT_FOUND", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(DuplicateBeneficiaryException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateBeneficiary(DuplicateBeneficiaryException ex,
+            HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "BENEFICIARY_ALREADY_EXISTS", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(AccountNotActiveException.class)
     public ResponseEntity<ErrorResponse> handleAccountNotActive(AccountNotActiveException ex,
             HttpServletRequest request) {

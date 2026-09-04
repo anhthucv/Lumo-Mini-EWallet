@@ -53,6 +53,17 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void beneficiaryErrors_shouldUseStandardCodes() {
+        ErrorResponse duplicate = handler.handleDuplicateBeneficiary(new DuplicateBeneficiaryException(), request)
+                .getBody();
+        ErrorResponse missing = handler.handleBeneficiaryNotFound(new BeneficiaryNotFoundException(9L), request)
+                .getBody();
+
+        assertStandard(duplicate, 409, "BENEFICIARY_ALREADY_EXISTS", "/wallet/deposit");
+        assertStandard(missing, 404, "BENEFICIARY_NOT_FOUND", "/wallet/deposit");
+    }
+
+    @Test
     void riskRejected_shouldUseConflictAndSafeMessage() {
         ErrorResponse response = handler.handleRiskRejected(new RiskRejectedException(), request).getBody();
 
