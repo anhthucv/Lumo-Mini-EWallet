@@ -108,6 +108,14 @@
   white-space: nowrap;
 }
 
+.limit-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
 .deposit-button {
   justify-self: start;
 }

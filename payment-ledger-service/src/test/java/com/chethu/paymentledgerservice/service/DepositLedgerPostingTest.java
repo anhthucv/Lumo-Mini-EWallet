@@ -55,7 +55,8 @@ class DepositLedgerPostingTest {
         AccountService service = new AccountService(accountRepository, transactionService,
                 org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository,
                 new IdempotencyService(org.mockito.Mockito.mock(
-                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)),
+                org.mockito.Mockito.mock(TransactionLimitService.class));
 
         AccountResponse response = service.depositForCurrentUser(42L, money("100000.00"), null);
 
@@ -105,7 +106,8 @@ class DepositLedgerPostingTest {
         AccountService service = new AccountService(accountRepository, transactionService,
                 org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository,
                 new IdempotencyService(org.mockito.Mockito.mock(
-                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)),
+                org.mockito.Mockito.mock(TransactionLimitService.class));
 
         service.depositForCurrentUser(42L, money("100000.00"), null);
         service.depositForCurrentUser(42L, money("50000.00"), null);
@@ -127,7 +129,8 @@ class DepositLedgerPostingTest {
                 org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
                 ledgerAccountRepository, journalRepository,
                 new IdempotencyService(org.mockito.Mockito.mock(
-                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)),
+                org.mockito.Mockito.mock(TransactionLimitService.class));
 
         assertThrows(AccountNotActiveException.class,
                 () -> service.depositForCurrentUser(42L, money("100000.00"), null));

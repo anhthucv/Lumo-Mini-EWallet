@@ -17,6 +17,7 @@ import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
 import com.chethu.paymentledgerservice.dto.RecipientResponse;
 import com.chethu.paymentledgerservice.dto.TransferRequest;
+import com.chethu.paymentledgerservice.dto.WalletLimitsResponse;
 import com.chethu.paymentledgerservice.security.AuthenticatedUserPrincipal;
 import com.chethu.paymentledgerservice.service.AccountService;
 
@@ -40,6 +41,16 @@ public class WalletController {
 
         MyWalletResponse response = accountService.getMyWallet(principal.userId());
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/limits")
+    public ResponseEntity<WalletLimitsResponse> limits(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
+        if (principal == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
+        }
+
+        return ResponseEntity.ok(accountService.getWalletLimits(principal.userId()));
     }
 
     @GetMapping("/recipient")

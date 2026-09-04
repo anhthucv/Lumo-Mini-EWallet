@@ -58,7 +58,8 @@ class WithdrawLedgerPostingTest {
         AccountService service = new AccountService(accountRepository, transactionService,
                 org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository,
                 new IdempotencyService(org.mockito.Mockito.mock(
-                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)),
+                org.mockito.Mockito.mock(TransactionLimitService.class));
 
         AccountResponse response = service.withdrawForCurrentUser(42L, money("100000.00"), null);
 
@@ -109,7 +110,8 @@ class WithdrawLedgerPostingTest {
                 org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
                 ledgerAccountRepository, journalRepository,
                 new IdempotencyService(org.mockito.Mockito.mock(
-                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)),
+                org.mockito.Mockito.mock(TransactionLimitService.class));
 
         service.withdrawForCurrentUser(42L, money("100000.00"), null);
 
@@ -131,7 +133,8 @@ class WithdrawLedgerPostingTest {
                     org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
                     ledgerAccountRepository, journalRepository,
                     new IdempotencyService(org.mockito.Mockito.mock(
-                            com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
+                            com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)),
+                    org.mockito.Mockito.mock(TransactionLimitService.class));
 
             assertThrows(AccountNotActiveException.class,
                     () -> service.withdrawForCurrentUser(42L, money("100000.00"), null));
@@ -152,7 +155,8 @@ class WithdrawLedgerPostingTest {
                 org.mockito.Mockito.mock(TransactionService.class), org.mockito.Mockito.mock(AccountNumberGenerator.class),
                 ledgerAccountRepository, journalRepository,
                 new IdempotencyService(org.mockito.Mockito.mock(
-                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)),
+                org.mockito.Mockito.mock(TransactionLimitService.class));
 
         assertThrows(RuntimeException.class,
                 () -> service.withdrawForCurrentUser(42L, money("60000.00"), null));

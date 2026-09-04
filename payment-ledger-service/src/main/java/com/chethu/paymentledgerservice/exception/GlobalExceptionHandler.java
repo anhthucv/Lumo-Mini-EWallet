@@ -122,6 +122,18 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.CONFLICT, "IDEMPOTENCY_CONFLICT", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(PerTransactionLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handlePerTransactionLimitExceeded(
+            PerTransactionLimitExceededException ex, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "PER_TRANSACTION_LIMIT_EXCEEDED", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(DailyTransactionLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleDailyTransactionLimitExceeded(
+            DailyTransactionLimitExceededException ex, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "DAILY_TRANSACTION_LIMIT_EXCEEDED", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex,
             HttpServletRequest request) {

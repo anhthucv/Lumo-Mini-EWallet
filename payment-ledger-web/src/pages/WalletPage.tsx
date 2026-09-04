@@ -3,7 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError } from '../api/http';
 import { getOrCreateIdempotencyAttempt, type IdempotencyAttempt } from '../api/idempotency';
-import { deposit, getMyWallet, getRecipient, getTransaction, getTransactions, transfer, withdraw } from '../api/walletApi';
+import {
+  deposit,
+  getMyWallet,
+  getRecipient,
+  getTransaction,
+  getTransactions,
+  getWalletLimits,
+  transfer,
+  withdraw,
+} from '../api/walletApi';
 import { useAuth } from '../auth/AuthContext';
 import type {
   DepositResponse,
@@ -12,6 +21,8 @@ import type {
   TransactionFilters,
   TransactionResponse,
   TransactionType,
+  TransactionLimit,
+  WalletLimitsResponse,
 } from '../types/wallet';
 import './register.css';
 import './wallet.css';
@@ -60,6 +71,12 @@ function getErrorMessage(error: unknown): string {
 }
 
 function getDepositErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.code === 'PER_TRANSACTION_LIMIT_EXCEEDED') {
+    return 'This deposit exceeds the per-transaction limit.';
+  }
+  if (error instanceof ApiError && error.code === 'DAILY_TRANSACTION_LIMIT_EXCEEDED') {
+    return 'This deposit exceeds the remaining daily limit.';
+  }
   if (error instanceof ApiError && error.status === 400) {
     return error.message || 'Enter a valid deposit amount of at least 1 VND.';
   }
@@ -73,6 +90,12 @@ function getDepositErrorMessage(error: unknown): string {
 }
 
 function getWithdrawErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.code === 'PER_TRANSACTION_LIMIT_EXCEEDED') {
+    return 'This withdrawal exceeds the per-transaction limit.';
+  }
+  if (error instanceof ApiError && error.code === 'DAILY_TRANSACTION_LIMIT_EXCEEDED') {
+    return 'This withdrawal exceeds the remaining daily limit.';
+  }
   if (error instanceof ApiError && error.status === 400) {
     return error.message || 'The withdrawal amount is not valid or exceeds the available balance.';
   }
@@ -99,6 +122,12 @@ function getRecipientErrorMessage(error: unknown): string {
 }
 
 function getTransferErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.code === 'PER_TRANSACTION_LIMIT_EXCEEDED') {
+    return 'This transfer exceeds the per-transaction limit.';
+  }
+  if (error instanceof ApiError && error.code === 'DAILY_TRANSACTION_LIMIT_EXCEEDED') {
+    return 'This transfer exceeds the remaining daily limit.';
+  }
   if (error instanceof ApiError && error.status === 400) {
     return error.message || 'The transfer could not be completed with these details.';
   }
@@ -161,12 +190,24 @@ function toWalletResponse(wallet: MyWalletResponse, response: DepositResponse): 
   };
 }
 
+function getLimitValidationMessage(amount: number, limit: TransactionLimit, operation: string): string | null {
+  if (amount > Number(limit.perTransactionLimit)) {
+    return `This ${operation} exceeds the per-transaction limit of ${formatBalance(limit.perTransactionLimit)}.`;
+  }
+  if (amount > Number(limit.remainingToday)) {
+    return `This ${operation} exceeds the remaining daily limit of ${formatBalance(limit.remainingToday)}.`;
+  }
+  return null;
+}
+
 export default function WalletPage() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const [wallet, setWallet] = useState<MyWalletResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [limits, setLimits] = useState<WalletLimitsResponse | null>(null);
+  const [limitsError, setLimitsError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [amount, setAmount] = useState('');
   const [depositError, setDepositError] = useState<string | null>(null);
@@ -203,6 +244,24 @@ export default function WalletPage() {
   const depositAttempt = useRef<IdempotencyAttempt | null>(null);
   const withdrawAttempt = useRef<IdempotencyAttempt | null>(null);
   const transferAttempt = useRef<IdempotencyAttempt | null>(null);
+
+  async function refreshLimits() {
+    try {
+      setLimits(await getWalletLimits());
+      setLimitsError(null);
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        logout();
+        navigate('/login', { replace: true });
+        return;
+      }
+      setLimitsError('Transaction limits could not be loaded. Backend limits still apply.');
+    }
+  }
+
+  useEffect(() => {
+    void refreshLimits();
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -334,6 +393,13 @@ export default function WalletPage() {
       setDepositError('The minimum deposit is 1 VND.');
       return;
     }
+    if (limits) {
+      const limitError = getLimitValidationMessage(numericAmount, limits.deposit, 'deposit');
+      if (limitError) {
+        setDepositError(limitError);
+        return;
+      }
+    }
 
     const attempt = getOrCreateIdempotencyAttempt(depositAttempt.current, String(numericAmount));
     depositAttempt.current = attempt;
@@ -347,6 +413,7 @@ export default function WalletPage() {
         `Deposited ${formatBalance(numericAmount)}. Updated balance: ${formatBalance(response.balance)}.`,
       );
       setHistoryRefreshKey((key) => key + 1);
+      void refreshLimits();
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {
         depositAttempt.current = null;
@@ -377,6 +444,13 @@ export default function WalletPage() {
       setWithdrawError('The minimum withdrawal is 1 VND.');
       return;
     }
+    if (limits) {
+      const limitError = getLimitValidationMessage(numericAmount, limits.withdraw, 'withdrawal');
+      if (limitError) {
+        setWithdrawError(limitError);
+        return;
+      }
+    }
 
     const attempt = getOrCreateIdempotencyAttempt(withdrawAttempt.current, String(numericAmount));
     withdrawAttempt.current = attempt;
@@ -390,6 +464,7 @@ export default function WalletPage() {
         `Withdrew ${formatBalance(numericAmount)}. Updated balance: ${formatBalance(response.balance)}.`,
       );
       setHistoryRefreshKey((key) => key + 1);
+      void refreshLimits();
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {
         withdrawAttempt.current = null;
@@ -483,6 +558,13 @@ export default function WalletPage() {
       setTransferError('The minimum transfer is 1 VND.');
       return;
     }
+    if (limits) {
+      const limitError = getLimitValidationMessage(numericAmount, limits.transfer, 'transfer');
+      if (limitError) {
+        setTransferError(limitError);
+        return;
+      }
+    }
 
     const payload = JSON.stringify({
       recipientAccountNumber: recipient.accountNumber,
@@ -502,6 +584,7 @@ export default function WalletPage() {
         `Transferred ${formatBalance(numericAmount)} to ${response.accountNumber}. Updated balance: ${formatBalance(response.balance)}.`,
       );
       setHistoryRefreshKey((key) => key + 1);
+      void refreshLimits();
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {
         transferAttempt.current = null;
@@ -587,6 +670,7 @@ export default function WalletPage() {
                 <strong>{wallet.accountId}</strong>
               </div>
             </div>
+            {limitsError && <div className="banner error" role="status">{limitsError}</div>}
             <form className="deposit-panel" onSubmit={handleDeposit} noValidate>
               <div className="deposit-heading">
                 <div>
@@ -595,6 +679,10 @@ export default function WalletPage() {
                 </div>
                 <span className="deposit-minimum">Minimum 1 VND</span>
               </div>
+              {limits && <div className="limit-summary">
+                <span>Per-transaction limit: {formatBalance(limits.deposit.perTransactionLimit)}</span>
+                <span>Remaining today: {formatBalance(limits.deposit.remainingToday)}</span>
+              </div>}
               <label className="field-group" htmlFor="deposit-amount">
                 <span className="field-label">Amount in VND</span>
                 <input
@@ -627,6 +715,10 @@ export default function WalletPage() {
                 </div>
                 <span className="deposit-minimum">Minimum 1 VND</span>
               </div>
+              {limits && <div className="limit-summary">
+                <span>Per-transaction limit: {formatBalance(limits.withdraw.perTransactionLimit)}</span>
+                <span>Remaining today: {formatBalance(limits.withdraw.remainingToday)}</span>
+              </div>}
               <label className="field-group" htmlFor="withdraw-amount">
                 <span className="field-label">Amount in VND</span>
                 <input
@@ -659,6 +751,10 @@ export default function WalletPage() {
                 </div>
                 <span className="deposit-minimum">Minimum 1 VND</span>
               </div>
+              {limits && <div className="limit-summary">
+                <span>Per-transaction limit: {formatBalance(limits.transfer.perTransactionLimit)}</span>
+                <span>Remaining today: {formatBalance(limits.transfer.remainingToday)}</span>
+              </div>}
               <form className="transfer-lookup" onSubmit={handleRecipientLookup} noValidate>
                 <label className="field-group" htmlFor="recipient-account-number">
                   <span className="field-label">Recipient account number</span>

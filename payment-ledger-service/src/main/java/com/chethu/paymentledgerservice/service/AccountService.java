@@ -1,5 +1,6 @@
 package com.chethu.paymentledgerservice.service;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.chethu.paymentledgerservice.domain.TransactionType;
+import com.chethu.paymentledgerservice.domain.LimitOperationType;
 import com.chethu.paymentledgerservice.domain.IdempotencyOperationType;
 import com.chethu.paymentledgerservice.domain.WalletRules;
 import com.chethu.paymentledgerservice.domain.AccountStatus;
@@ -22,6 +24,7 @@ import com.chethu.paymentledgerservice.dto.MyWalletResponse;
 import com.chethu.paymentledgerservice.dto.RecipientResponse;
 import com.chethu.paymentledgerservice.dto.TransferRequest;
 import com.chethu.paymentledgerservice.dto.UpdateAccountRequest;
+import com.chethu.paymentledgerservice.dto.WalletLimitsResponse;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.entity.JournalEntity;
 import com.chethu.paymentledgerservice.entity.LedgerAccountEntity;
@@ -43,16 +46,19 @@ public class AccountService {
     private final LedgerAccountRepository ledgerAccountRepository;
     private final JournalRepository journalRepository;
     private final IdempotencyService idempotencyService;
+    private final TransactionLimitService transactionLimitService;
 
     public AccountService(AccountRepository accountRepository,TransactionService transactionService,
             AccountNumberGenerator accountNumberGenerator, LedgerAccountRepository ledgerAccountRepository,
-            JournalRepository journalRepository, IdempotencyService idempotencyService){
+            JournalRepository journalRepository, IdempotencyService idempotencyService,
+            TransactionLimitService transactionLimitService){
         this.accountRepository=accountRepository;
         this.transactionService = transactionService;
         this.accountNumberGenerator = accountNumberGenerator;
         this.ledgerAccountRepository = ledgerAccountRepository;
         this.journalRepository = journalRepository;
         this.idempotencyService = idempotencyService;
+        this.transactionLimitService = transactionLimitService;
     }
 
 
@@ -87,6 +93,12 @@ public class AccountService {
         AccountEntity account = accountRepository.findByUserId(userId)
                 .orElseThrow(() -> new AccountNotFoundException(userId));
         return MyWalletResponse.from(account);
+    }
+
+    public WalletLimitsResponse getWalletLimits(Long userId) {
+        AccountEntity account = accountRepository.findByUserId(userId)
+                .orElseThrow(() -> new AccountNotFoundException(userId));
+        return transactionLimitService.getWalletLimits(account);
     }
 
     public RecipientResponse getRecipient(String accountNumber) {
@@ -133,6 +145,7 @@ public class AccountService {
             return replayResponse(account, existing);
         }
         ensureAccountActive(account);
+        validateLimit(account, LimitOperationType.DEPOSIT, request.getAmount());
         PostedOperation posted = depositToAccount(account, request);
         idempotencyService.saveCompleted(account, IdempotencyOperationType.DEPOSIT, idempotencyKey,
                 request.getAmount(), null, account.getBalance(), posted.journal());
@@ -182,6 +195,7 @@ public class AccountService {
             return replayResponse(account, existing);
         }
         ensureAccountActive(account);
+        validateLimit(account, LimitOperationType.WITHDRAW, request.getAmount());
         PostedOperation posted = withdrawFromAccount(account,request);
         idempotencyService.saveCompleted(account, IdempotencyOperationType.WITHDRAW, idempotencyKey,
                 request.getAmount(), null, account.getBalance(), posted.journal());
@@ -226,6 +240,7 @@ public class AccountService {
         }
         ensureAccountActive(sender);
         ensureAccountActive(recipient);
+        validateLimit(sender, LimitOperationType.TRANSFER, request.getAmount());
         PostedOperation posted = transferBetweenAccounts(sender, recipient, request);
         idempotencyService.saveCompleted(sender, IdempotencyOperationType.TRANSFER, idempotencyKey,
                 request.getAmount(), request.getRecipientAccountNumber(), sender.getBalance(), posted.journal());
@@ -235,6 +250,12 @@ public class AccountService {
     private void ensureAccountActive(AccountEntity account) {
         if (account.getStatus() != AccountStatus.ACTIVE) {
             throw new AccountNotActiveException();
+        }
+    }
+
+    private void validateLimit(AccountEntity account, LimitOperationType operation, BigDecimal amount) {
+        if (transactionLimitService != null) {
+            transactionLimitService.validate(account, operation, amount);
         }
     }
 

@@ -226,7 +226,8 @@ class AccountIdempotencyTest {
             return new AccountService(accountRepository,
                     new TransactionService(transactionRepository, accountRepository),
                     org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository,
-                    new IdempotencyService(idempotencyRepository));
+                    new IdempotencyService(idempotencyRepository),
+                    org.mockito.Mockito.mock(TransactionLimitService.class));
         }
     }
 }

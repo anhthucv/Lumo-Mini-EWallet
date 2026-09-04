@@ -17,6 +17,8 @@ import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
 import com.chethu.paymentledgerservice.dto.RecipientResponse;
 import com.chethu.paymentledgerservice.dto.TransferRequest;
+import com.chethu.paymentledgerservice.dto.TransactionLimitResponse;
+import com.chethu.paymentledgerservice.dto.WalletLimitsResponse;
 import com.chethu.paymentledgerservice.repository.JournalRepository;
 import com.chethu.paymentledgerservice.repository.LedgerAccountRepository;
 import com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository;
@@ -60,6 +62,25 @@ class WalletControllerTest {
 
         assertEquals(1, method.getParameterCount());
         assertEquals(AuthenticatedUserPrincipal.class, method.getParameterTypes()[0]);
+    }
+
+    @Test
+    void limits_shouldReturnAuthenticatedUsersWalletLimits() {
+        StubAccountService service = new StubAccountService();
+        WalletController walletController = new WalletController(service);
+        AuthenticatedUserPrincipal principal = new AuthenticatedUserPrincipal(
+                42L, "user@example.com", "Nguyen Van A", null, null);
+
+        WalletLimitsResponse response = walletController.limits(principal).getBody();
+
+        assertNotNull(response);
+        assertEquals(new BigDecimal("50000000.00"), response.deposit().perTransactionLimit());
+        assertEquals(new BigDecimal("80000000.00"), response.deposit().remainingToday());
+    }
+
+    @Test
+    void limits_shouldRequireAuthenticatedPrincipal() {
+        assertThrows(ResponseStatusException.class, () -> controller.limits(null));
     }
 
     @Test
@@ -167,6 +188,20 @@ class WalletControllerTest {
                     "Nguyen Van A",
                     new BigDecimal("250000.00"),
                     AccountStatus.ACTIVE);
+        }
+
+        @Override
+        public WalletLimitsResponse getWalletLimits(Long userId) {
+            TransactionLimitResponse deposit = new TransactionLimitResponse(
+                    new BigDecimal("50000000.00"), new BigDecimal("100000000.00"),
+                    new BigDecimal("20000000.00"), new BigDecimal("80000000.00"));
+            TransactionLimitResponse withdraw = new TransactionLimitResponse(
+                    new BigDecimal("20000000.00"), new BigDecimal("50000000.00"),
+                    BigDecimal.ZERO, new BigDecimal("50000000.00"));
+            TransactionLimitResponse transfer = new TransactionLimitResponse(
+                    new BigDecimal("50000000.00"), new BigDecimal("100000000.00"),
+                    BigDecimal.ZERO, new BigDecimal("100000000.00"));
+            return new WalletLimitsResponse(deposit, withdraw, transfer);
         }
 
         @Override

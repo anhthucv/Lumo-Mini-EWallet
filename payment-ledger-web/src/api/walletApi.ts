@@ -8,11 +8,19 @@ import type {
   TransactionFilters,
   TransferRequest,
   TransferResponse,
+  WalletLimitsResponse,
 } from '../types/wallet';
 import { requestJson } from './http';
 
 export function getMyWallet(signal?: AbortSignal): Promise<MyWalletResponse> {
   return requestJson<MyWalletResponse>('/wallet/me', {
+    method: 'GET',
+    signal,
+  });
+}
+
+export function getWalletLimits(signal?: AbortSignal): Promise<WalletLimitsResponse> {
+  return requestJson<WalletLimitsResponse>('/wallet/limits', {
     method: 'GET',
     signal,
   });

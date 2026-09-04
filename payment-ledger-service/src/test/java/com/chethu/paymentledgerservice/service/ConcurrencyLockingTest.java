@@ -153,7 +153,8 @@ class ConcurrencyLockingTest {
         when(ledgers.findByCode("SYSTEM_CLEARING")).thenReturn(Optional.of(system()));
         when(accounts.save(any(AccountEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         return new AccountService(accounts, new TransactionService(transactions, accounts),
-                org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgers, journals, idempotency);
+                org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgers, journals, idempotency,
+                org.mockito.Mockito.mock(TransactionLimitService.class));
     }
 
     private AccountEntity account(String number, Long id, String balance) {

@@ -23,6 +23,19 @@ export interface RecipientResponse {
   ownerName: string;
 }
 
+export interface TransactionLimit {
+  perTransactionLimit: number | string;
+  dailyLimit: number | string;
+  usedToday: number | string;
+  remainingToday: number | string;
+}
+
+export interface WalletLimitsResponse {
+  deposit: TransactionLimit;
+  withdraw: TransactionLimit;
+  transfer: TransactionLimit;
+}
+
 export interface TransferRequest {
   recipientAccountNumber: string;
   amount: number;

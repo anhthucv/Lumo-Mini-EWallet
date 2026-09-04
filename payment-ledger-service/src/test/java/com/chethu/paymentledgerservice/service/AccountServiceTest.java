@@ -232,7 +232,7 @@ class AccountServiceTest {
                 mock(AccountNumberGenerator.class));
 
         assertThrows(com.chethu.paymentledgerservice.exception.InvalidTransferException.class,
-                () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "999.99"), null));
+                () -> service.transferForCurrentUser(42L, transferRequest("ACC-RECIPIENT", "0.99"), null));
         verify(accountRepository, never()).findByUserId(any());
     }
 
@@ -265,7 +265,8 @@ class AccountServiceTest {
         AccountService service = new AccountService(accountRepository, transactionService, generator,
                 ledgerAccountRepository, journalRepository,
                 new IdempotencyService(org.mockito.Mockito.mock(
-                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)),
+                org.mockito.Mockito.mock(TransactionLimitService.class));
 
         AccountEntity account = new AccountEntity("ACC-999999999999", "Nguyen Van A");
         setId(account, 77L);
@@ -290,11 +291,8 @@ class AccountServiceTest {
         TransactionService transactionService = mock(TransactionService.class);
         AccountService service = service(accountRepository, transactionService, mock(AccountNumberGenerator.class));
         AccountEntity account = new AccountEntity("ACC-999999999999", "Nguyen Van A");
-        when(accountRepository.findByUserId(42L)).thenReturn(Optional.of(account));
-        when(accountRepository.findByIdForUpdate(77L)).thenReturn(Optional.of(account));
-
         assertThrows(IllegalArgumentException.class,
-                () -> service.depositForCurrentUser(42L, moneyRequest("999.99"), null));
+                () -> service.depositForCurrentUser(42L, moneyRequest("0.99"), null));
         verify(accountRepository, never()).save(any(AccountEntity.class));
         verify(transactionService, never()).recordTransaction(any(), any(), any(), any(), any());
     }
@@ -472,7 +470,8 @@ class AccountServiceTest {
         return new AccountService(accountRepository, transactionService, accountNumberGenerator,
                 ledgerAccountRepository, journalRepository,
                 new IdempotencyService(org.mockito.Mockito.mock(
-                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
+                        com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)),
+                org.mockito.Mockito.mock(TransactionLimitService.class));
     }
 
     private TransferRequest transferRequest(String recipientAccountNumber, String amount) {

@@ -304,7 +304,8 @@ class LedgerBalanceConsistencyTest {
             return new AccountService(accountRepository, transactionService,
                     org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository,
                     new IdempotencyService(org.mockito.Mockito.mock(
-                            com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)));
+                            com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)),
+                    org.mockito.Mockito.mock(TransactionLimitService.class));
         }
     }
 }
