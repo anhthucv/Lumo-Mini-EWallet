@@ -97,6 +97,9 @@ export default function DashboardPage() {
             <Link to="/profile" className="secondary-button secondary-button-link">
               Profile
             </Link>
+            <Link to="/beneficiaries" className="secondary-button secondary-button-link">
+              Beneficiaries
+            </Link>
             <button type="button" className="primary-button" onClick={handleSignOut}>
               Sign out
             </button>

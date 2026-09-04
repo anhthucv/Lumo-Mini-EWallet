@@ -124,6 +124,75 @@
   border-color: rgba(251, 191, 36, 0.24);
 }
 
+.saved-recipients {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(125, 211, 252, 0.14);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.34);
+}
+
+.saved-recipients-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.saved-recipients-heading h3 {
+  margin: 4px 0 0;
+  font-size: 1rem;
+}
+
+.saved-recipient-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+}
+
+.saved-recipient {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 10px;
+  background: rgba(6, 13, 24, 0.56);
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.saved-recipient:hover:not(:disabled),
+.saved-recipient.selected {
+  border-color: rgba(52, 211, 153, 0.62);
+  background: rgba(52, 211, 153, 0.1);
+}
+
+.saved-recipient strong {
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-recipient span,
+.saved-recipient small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-recipients-state {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.saved-recipients-error {
+  color: #fecdd3;
+}
+
 .transfer-lookup {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

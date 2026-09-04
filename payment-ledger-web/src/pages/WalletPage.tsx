@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError } from '../api/http';
+import { getBeneficiaries } from '../api/beneficiaryApi';
 import { getOrCreateIdempotencyAttempt, type IdempotencyAttempt } from '../api/idempotency';
 import {
   deposit,
@@ -14,6 +15,9 @@ import {
   withdraw,
 } from '../api/walletApi';
 import { useAuth } from '../auth/AuthContext';
+import type {
+  Beneficiary,
+} from '../types/beneficiary';
 import type {
   DepositResponse,
   MyWalletResponse,
@@ -230,6 +234,10 @@ export default function WalletPage() {
   const [recipient, setRecipient] = useState<RecipientResponse | null>(null);
   const [recipientError, setRecipientError] = useState<string | null>(null);
   const [lookingUpRecipient, setLookingUpRecipient] = useState(false);
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
+  const [beneficiariesLoading, setBeneficiariesLoading] = useState(true);
+  const [beneficiariesError, setBeneficiariesError] = useState<string | null>(null);
+  const [selectedBeneficiaryId, setSelectedBeneficiaryId] = useState<number | null>(null);
   const [transferAmount, setTransferAmount] = useState('');
   const [transferError, setTransferError] = useState<string | null>(null);
   const [transferSuccess, setTransferSuccess] = useState<string | null>(null);
@@ -271,6 +279,37 @@ export default function WalletPage() {
   useEffect(() => {
     void refreshLimits();
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadBeneficiaries() {
+      setBeneficiariesLoading(true);
+      setBeneficiariesError(null);
+
+      try {
+        setBeneficiaries(await getBeneficiaries(controller.signal));
+      } catch (requestError) {
+        if (controller.signal.aborted) {
+          return;
+        }
+        if (requestError instanceof ApiError && requestError.status === 401) {
+          logout();
+          navigate('/login', { replace: true });
+          return;
+        }
+        setBeneficiariesError('Saved recipients could not be loaded. You can still enter an account number manually.');
+      } finally {
+        if (!controller.signal.aborted) {
+          setBeneficiariesLoading(false);
+        }
+      }
+    }
+
+    void loadBeneficiaries();
+
+    return () => controller.abort();
+  }, [logout, navigate]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -493,6 +532,7 @@ export default function WalletPage() {
   function handleRecipientChange(value: string) {
     transferAttempt.current = null;
     setRecipientAccountNumber(value);
+    setSelectedBeneficiaryId(null);
     setRecipient(null);
     setRecipientError(null);
     setTransferError(null);
@@ -517,14 +557,13 @@ export default function WalletPage() {
     setHistoryPage(0);
   }
 
-  async function handleRecipientLookup(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function lookupRecipient(accountNumberInput = recipientAccountNumber) {
     setRecipientError(null);
     setRecipient(null);
     setTransferError(null);
     setTransferSuccess(null);
 
-    const accountNumber = recipientAccountNumber.trim();
+    const accountNumber = accountNumberInput.trim();
     if (!accountNumber) {
       setRecipientError('Enter a recipient account number.');
       return;
@@ -547,6 +586,21 @@ export default function WalletPage() {
     } finally {
       setLookingUpRecipient(false);
     }
+  }
+
+  async function handleRecipientLookup(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await lookupRecipient();
+  }
+
+  function selectBeneficiary(beneficiary: Beneficiary) {
+    handleRecipientChange(beneficiary.accountNumber);
+    setSelectedBeneficiaryId(beneficiary.id);
+    void lookupRecipient(beneficiary.accountNumber);
+  }
+
+  function formatBeneficiaryAccount(accountNumber: string): string {
+    return accountNumber.length > 4 ? `**** ${accountNumber.slice(-4)}` : accountNumber;
   }
 
   async function handleTransfer(event: FormEvent<HTMLFormElement>) {
@@ -626,6 +680,9 @@ export default function WalletPage() {
           </Link>
           <Link to="/profile" className="secondary-button secondary-button-link">
             Profile
+          </Link>
+          <Link to="/beneficiaries" className="secondary-button secondary-button-link">
+            Beneficiaries
           </Link>
         </div>
 
@@ -764,6 +821,47 @@ export default function WalletPage() {
                 <span>Per-transaction limit: {formatBalance(limits.transfer.perTransactionLimit)}</span>
                 <span>Remaining today: {formatBalance(limits.transfer.remainingToday)}</span>
               </div>}
+              <div className="saved-recipients" aria-labelledby="saved-recipients-title">
+                <div className="saved-recipients-heading">
+                  <div>
+                    <span className="deposit-kicker">Quick select</span>
+                    <h3 id="saved-recipients-title">Saved recipients</h3>
+                  </div>
+                  {!beneficiariesLoading && beneficiaries.length > 0 && (
+                    <span className="history-count">{beneficiaries.length} saved</span>
+                  )}
+                </div>
+                {beneficiariesLoading && (
+                  <div className="saved-recipients-state" role="status">Loading saved recipients...</div>
+                )}
+                {!beneficiariesLoading && beneficiariesError && (
+                  <div className="saved-recipients-state saved-recipients-error" role="status">
+                    {beneficiariesError}
+                  </div>
+                )}
+                {!beneficiariesLoading && !beneficiariesError && beneficiaries.length === 0 && (
+                  <div className="saved-recipients-state">No saved recipients yet.</div>
+                )}
+                {!beneficiariesLoading && beneficiaries.length > 0 && (
+                  <div className="saved-recipient-list">
+                    {beneficiaries.map((beneficiary) => (
+                      <button
+                        key={beneficiary.id}
+                        type="button"
+                        className={`saved-recipient ${selectedBeneficiaryId === beneficiary.id ? 'selected' : ''}`}
+                        aria-pressed={selectedBeneficiaryId === beneficiary.id}
+                        onClick={() => selectBeneficiary(beneficiary)}
+                        disabled={lookingUpRecipient || transferring}
+                        title={`Use account ${beneficiary.accountNumber}`}
+                      >
+                        <strong>{beneficiary.nickname}</strong>
+                        <span>{beneficiary.recipientOwnerName}</span>
+                        <small>{formatBeneficiaryAccount(beneficiary.accountNumber)}</small>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <form className="transfer-lookup" onSubmit={handleRecipientLookup} noValidate>
                 <label className="field-group" htmlFor="recipient-account-number">
                   <span className="field-label">Recipient account number</span>

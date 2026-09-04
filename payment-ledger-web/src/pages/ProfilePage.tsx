@@ -178,6 +178,7 @@ export default function ProfilePage() {
           <div className="profile-navigation">
             <Link to="/dashboard" className="secondary-button secondary-button-link">Dashboard</Link>
             <Link to="/wallet" className="secondary-button secondary-button-link">My Wallet</Link>
+            <Link to="/beneficiaries" className="secondary-button secondary-button-link">Beneficiaries</Link>
           </div>
         </div>
 
