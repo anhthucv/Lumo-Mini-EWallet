@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError } from '../api/http';
 import { getBeneficiaries } from '../api/beneficiaryApi';
+import NotificationBell from '../components/NotificationBell';
 import { getOrCreateIdempotencyAttempt, type IdempotencyAttempt } from '../api/idempotency';
 import {
   deposit,
@@ -680,6 +681,7 @@ export default function WalletPage() {
               <strong>My Wallet</strong>
             </div>
           </Link>
+          <NotificationBell />
           <Link to="/dashboard" className="secondary-button secondary-button-link">
             Dashboard
           </Link>

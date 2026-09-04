@@ -1,0 +1,141 @@
+.notifications-shell {
+  padding-block: clamp(24px, 6vw, 72px);
+}
+
+.notifications-card {
+  width: min(920px, 100%);
+}
+
+.notifications-topbar {
+  align-items: center;
+}
+
+.notifications-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.notifications-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 64px 0 32px;
+}
+
+.notifications-heading h1 {
+  margin: 4px 0 0;
+  font-size: clamp(2.1rem, 5vw, 3.5rem);
+  letter-spacing: -0.045em;
+}
+
+.notifications-heading p {
+  margin: 14px 0 0;
+  color: var(--muted);
+}
+
+.notification-page-list {
+  display: grid;
+  gap: 10px;
+}
+
+.notification-page-item {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 8px;
+  align-items: start;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: var(--radius-md);
+  background: rgba(15, 23, 42, 0.48);
+  color: var(--muted);
+  text-align: left;
+}
+
+.notification-page-item:hover:not(:disabled) {
+  border-color: rgba(125, 211, 252, 0.38);
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.notification-page-item.unread {
+  border-color: rgba(125, 211, 252, 0.3);
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.notification-page-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(52, 211, 153, 0.13);
+  color: var(--success);
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.notification-page-copy {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.notification-page-copy strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.notification-page-copy span {
+  line-height: 1.45;
+}
+
+.notification-page-copy small {
+  color: rgba(168, 181, 199, 0.72);
+}
+
+.notification-page-state {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.notification-page-error {
+  color: #fecdd3;
+}
+
+.notification-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 18px;
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .notifications-topbar,
+  .notifications-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .notifications-heading {
+    margin-top: 44px;
+  }
+
+  .notifications-navigation {
+    justify-content: flex-start;
+  }
+
+  .notification-pagination {
+    flex-wrap: wrap;
+  }
+}

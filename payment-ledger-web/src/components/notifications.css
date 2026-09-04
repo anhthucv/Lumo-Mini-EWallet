@@ -1,0 +1,233 @@
+.notification-anchor {
+  position: relative;
+  z-index: 5;
+}
+
+.notification-bell {
+  position: relative;
+  display: inline-grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: rgba(14, 24, 42, 0.84);
+  color: var(--text);
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.notification-bell:hover {
+  transform: translateY(-1px);
+  border-color: rgba(125, 211, 252, 0.55);
+  background: rgba(22, 39, 62, 0.92);
+}
+
+.notification-bell svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 5px;
+  place-items: center;
+  border: 2px solid var(--bg);
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff7f8;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.notification-preview {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  display: grid;
+  width: min(390px, calc(100vw - 32px));
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: rgba(9, 18, 31, 0.98);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.notification-preview-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.notification-kicker {
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.notification-preview h2 {
+  margin: 3px 0 0;
+  font-size: 1.25rem;
+}
+
+.notification-text-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.notification-text-button:hover:not(:disabled) {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.notification-text-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.notification-preview-list {
+  display: grid;
+  gap: 7px;
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+}
+
+.notification-item {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 8px;
+  align-items: start;
+  gap: 10px;
+  width: 100%;
+  padding: 11px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+}
+
+.notification-item:hover:not(:disabled) {
+  border-color: var(--border);
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.notification-item.unread {
+  border-color: rgba(125, 211, 252, 0.12);
+  background: rgba(56, 189, 248, 0.07);
+}
+
+.notification-item-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(52, 211, 153, 0.13);
+  color: var(--success);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.notification-item-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.notification-item-copy strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notification-item.unread .notification-item-copy strong {
+  font-weight: 800;
+}
+
+.notification-item-copy span {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.notification-item-copy small {
+  color: rgba(168, 181, 199, 0.72);
+  font-size: 0.72rem;
+}
+
+.notification-unread-dot {
+  width: 7px;
+  height: 7px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 0 4px rgba(125, 211, 252, 0.1);
+}
+
+.notification-state {
+  display: grid;
+  min-height: 100px;
+  place-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  text-align: center;
+}
+
+.notification-error,
+.notification-inline-error {
+  color: #fecdd3;
+}
+
+.notification-inline-error {
+  margin: -4px 0 0;
+  font-size: 0.78rem;
+}
+
+.notification-view-all {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  color: var(--primary);
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.notification-view-all:hover {
+  color: var(--text);
+}
+
+@media (max-width: 640px) {
+  .notification-preview {
+    position: fixed;
+    top: 76px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+}

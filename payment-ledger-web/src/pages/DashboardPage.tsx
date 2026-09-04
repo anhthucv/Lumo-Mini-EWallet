@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../auth/AuthContext';
+import NotificationBell from '../components/NotificationBell';
 import './register.css';
 
 export default function DashboardPage() {
@@ -91,6 +92,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="session-actions">
+            <NotificationBell />
             <Link to="/wallet" className="primary-button secondary-button-link">
               My Wallet
             </Link>

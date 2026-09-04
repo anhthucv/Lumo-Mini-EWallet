@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError } from '../api/http';
+import NotificationBell from '../components/NotificationBell';
 import { changeMyPassword, getMyProfile, updateMyProfile } from '../api/profileApi';
 import { useAuth } from '../auth/AuthContext';
 import type { ProfileResponse } from '../types/profile';
@@ -176,6 +177,7 @@ export default function ProfilePage() {
             <div className="brand-copy"><small>Payment Ledger</small><strong>My Profile</strong></div>
           </Link>
           <div className="profile-navigation">
+            <NotificationBell />
             <Link to="/dashboard" className="secondary-button secondary-button-link">Dashboard</Link>
             <Link to="/wallet" className="secondary-button secondary-button-link">My Wallet</Link>
             <Link to="/beneficiaries" className="secondary-button secondary-button-link">Beneficiaries</Link>
