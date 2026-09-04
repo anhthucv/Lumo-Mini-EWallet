@@ -252,30 +252,30 @@ export default function RegisterPage() {
 
   if (registrationResult) {
     return (
-      <main className="register-shell">
-        <section className="register-grid">
-          <aside className="hero-panel">
+      <main className="auth-shell auth-register-shell">
+        <section className="auth-grid">
+          <aside className="auth-hero">
             <div className="brand-row">
-              <div className="brand-mark">PL</div>
+              <div className="brand-mark" aria-hidden="true">
+                <span className="brand-mark-notch" />
+              </div>
               <div className="brand-copy">
-                <small>Payment Ledger</small>
-                <strong>E-Wallet Registration</strong>
+                <strong>Lumo</strong>
               </div>
             </div>
-            <span className="hero-kicker">Secure wallet setup completed</span>
+            <span className="auth-eyebrow">You are all set</span>
             <h1>Your account is ready.</h1>
             <p>
-              The wallet and user profile were created successfully. You can continue to the login page when you
-              are ready.
+              Your wallet is ready. Sign in whenever you are ready to get started.
             </p>
           </aside>
 
-          <section className="form-panel">
+          <section className="auth-card">
             <div className="success-panel">
               <div>
                 <h3>Registration successful</h3>
                 <p className="secondary-note">
-                  Safe registration details returned by the backend are shown below.
+                  Here are the details for your new wallet.
                 </p>
               </div>
 
@@ -297,26 +297,17 @@ export default function RegisterPage() {
                     <span>Balance</span>
                     <strong>{formatCurrency(registrationResult.balance)}</strong>
                   </div>
-                  <div className="summary-item">
-                    <span>User status</span>
-                    <strong>{registrationResult.userStatus}</strong>
-                  </div>
-                  <div className="summary-item">
-                    <span>Account status</span>
-                    <strong>{registrationResult.accountStatus}</strong>
-                  </div>
                 </div>
               </div>
 
               <div className="banner success">
-                Registration complete. You can continue to the login page when you are ready.
+                Your account is ready. Sign in to access your wallet.
               </div>
 
               <div className="field-row">
                 <button type="button" className="secondary-button" onClick={handleReset}>
                   Register another account
                 </button>
-                <div className="helper-text">You can reuse this page for another registration.</div>
               </div>
 
               <div className="auth-link-row">
@@ -333,45 +324,55 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="register-shell">
-      <section className="register-grid">
-        <aside className="hero-panel">
+    <main className="auth-shell auth-register-shell">
+      <section className="auth-grid">
+        <aside className="auth-hero">
           <div className="brand-row">
-            <div className="brand-mark">PL</div>
+            <div className="brand-mark" aria-hidden="true">
+              <span className="brand-mark-notch" />
+            </div>
             <div className="brand-copy">
-              <small>Payment Ledger</small>
-              <strong>E-Wallet Registration</strong>
+              <strong>Lumo</strong>
             </div>
           </div>
-          <span className="hero-kicker">Fintech onboarding made simple</span>
-          <h1>Create your wallet in a few secure steps.</h1>
-          <p>
-            Verify your email, choose a password, and create a new wallet account with a clean, polished
-            registration flow built for the Payment Ledger project.
-          </p>
-          <ul className="feature-list">
-            <li>
-              <span className="feature-badge">✓</span>
-              Email verification with 60-second resend protection
-            </li>
-            <li>
-              <span className="feature-badge">✓</span>
-              Strong password validation and OTP safety checks
-            </li>
-            <li>
-              <span className="feature-badge">✓</span>
-              Clear success state with wallet details returned by the backend
-            </li>
-          </ul>
+          <span className="auth-eyebrow">A better way to pay</span>
+          <h1>Money moves. You stay in control.</h1>
+          <p>Send, receive and keep track of your wallet in one place.</p>
+          <div className="wallet-art" aria-hidden="true">
+            <div className="wallet-art-card wallet-art-card-back" />
+            <div className="wallet-art-card-wrapper">
+              <div className="wallet-art-card wallet-art-card-front">
+                <div className="wallet-art-heading">
+                  <strong className="wallet-art-brand">Lumo Wallet <i aria-hidden="true" /></strong>
+                </div>
+                <div className="wallet-art-balance-block">
+                  <span className="wallet-art-label">Available balance</span>
+                  <strong className="wallet-art-balance">₫ 12,480,000</strong>
+                </div>
+                <div className="wallet-art-actions">
+                  <span className="wallet-art-action-send"><b>↗</b> Send</span>
+                  <span className="wallet-art-action-receive"><b>↙</b> Receive</span>
+                </div>
+                <div className="wallet-art-transaction">
+                  <span className="wallet-art-transaction-icon">↙</span>
+                  <div>
+                    <span className="wallet-art-label">Received</span>
+                    <strong>Minh</strong>
+                  </div>
+                  <b>+ ₫ 850,000</b>
+                </div>
+              </div>
+            </div>
+          </div>
         </aside>
 
-        <section className="form-panel" aria-label="Register form section">
+        <section className="auth-card" aria-label="Register form section">
           <div className="form-header">
             <div>
-              <h2>Register</h2>
-              <p>Set up your account and receive a wallet automatically.</p>
+              <span className="auth-card-kicker">Get started</span>
+              <h2>Create your account</h2>
+              <p>Start using your wallet in minutes.</p>
             </div>
-            <div className="status-pill">Secure registration</div>
           </div>
 
           {generalError ? <div className="banner error">{generalError}</div> : null}
@@ -401,7 +402,6 @@ export default function RegisterPage() {
                 <label className="field-label" htmlFor="email">
                   Email
                 </label>
-                <span className="field-hint">Used for OTP verification</span>
               </div>
               <div className="field-row">
                 <input
@@ -430,7 +430,6 @@ export default function RegisterPage() {
                 <label className="field-label" htmlFor="code">
                   Verification code
                 </label>
-                <span className="field-hint">6 numeric digits</span>
               </div>
               <input
                 id="code"
@@ -450,7 +449,6 @@ export default function RegisterPage() {
                 <label className="field-label" htmlFor="password">
                   Password
                 </label>
-                <span className="field-hint">At least 8 characters</span>
               </div>
               <div className="input-row">
                 <input
@@ -499,16 +497,17 @@ export default function RegisterPage() {
               <div className="helper-text">
                 {otpRequestedFor ? (
                   <>
-                    Code requested for <strong>{otpRequestedFor}</strong>
+                    Code sent to <strong>{otpRequestedFor}</strong>
                   </>
                 ) : (
-                  'Request a code first, then complete registration.'
+                  'We will send a code to verify your email.'
                 )}
               </div>
             </div>
 
-            <div className="footer-note">
-              Existing user? <Link className="auth-link" to="/login">Log in now</Link>.
+            <div className="auth-link-row">
+              <span>Already have an account?</span>
+              <Link className="auth-link" to="/login">Sign in</Link>
             </div>
           </form>
         </section>

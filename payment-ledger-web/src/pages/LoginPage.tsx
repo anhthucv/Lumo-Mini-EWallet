@@ -112,57 +112,62 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="register-shell">
-      <section className="register-grid">
-        <aside className="hero-panel">
+    <main className="auth-shell auth-login-shell">
+      <section className="auth-grid">
+        <aside className="auth-hero">
           <div className="brand-row">
-            <div className="brand-mark">PL</div>
+            <div className="brand-mark" aria-hidden="true">
+              <span className="brand-mark-notch" />
+            </div>
             <div className="brand-copy">
-              <small>Payment Ledger</small>
-              <strong>Secure Login</strong>
+              <strong>Lumo</strong>
             </div>
           </div>
-          <span className="hero-kicker">Fast access to your wallet</span>
-          <h1>Sign in to continue to Payment Ledger.</h1>
-          <p>
-            Use your registered email and password to receive a signed JWT session for upcoming authenticated
-            wallet features.
-          </p>
-          <ul className="feature-list">
-            <li>
-              <span className="feature-badge">✓</span>
-              Stateless JWT session stored locally for the current browser
-            </li>
-            <li>
-              <span className="feature-badge">✓</span>
-              Clear validation and error feedback before and after submit
-            </li>
-            <li>
-              <span className="feature-badge">✓</span>
-              Direct link back to registration if you need a new account
-            </li>
-          </ul>
+          <span className="auth-eyebrow">Welcome back</span>
+          <h1>Money moves. You stay in control.</h1>
+          <p>Send, receive and keep track of your wallet in one place.</p>
+          <div className="wallet-art" aria-hidden="true">
+            <div className="wallet-art-card wallet-art-card-back" />
+            <div className="wallet-art-card-wrapper">
+              <div className="wallet-art-card wallet-art-card-front">
+                <div className="wallet-art-heading">
+                  <strong className="wallet-art-brand">Lumo Wallet <i aria-hidden="true" /></strong>
+                </div>
+                <div className="wallet-art-balance-block">
+                  <span className="wallet-art-label">Available balance</span>
+                  <strong className="wallet-art-balance">₫ 12,480,000</strong>
+                </div>
+                <div className="wallet-art-actions">
+                  <span className="wallet-art-action-send"><b>↗</b> Send</span>
+                  <span className="wallet-art-action-receive"><b>↙</b> Receive</span>
+                </div>
+                <div className="wallet-art-transaction">
+                  <span className="wallet-art-transaction-icon">↙</span>
+                  <div>
+                    <span className="wallet-art-label">Received</span>
+                    <strong>Minh</strong>
+                  </div>
+                  <b>+ ₫ 850,000</b>
+                </div>
+              </div>
+            </div>
+          </div>
         </aside>
 
-        <section className="form-panel" aria-label="Login form section">
+        <section className="auth-card" aria-label="Login form section">
           <div className="form-header">
             <div>
-              <h2>Login</h2>
-              <p>Access your account with your email and password.</p>
+              <span className="auth-card-kicker">Sign in</span>
+              <h2>Welcome back</h2>
+              <p>Sign in to access your wallet.</p>
             </div>
-            <div className="status-pill">JWT ready</div>
           </div>
 
           {generalError ? <div className="banner error">{generalError}</div> : null}
 
           <form className="form" onSubmit={handleSubmit} noValidate>
             <div className="field-group">
-              <div className="label-row">
-                <label className="field-label" htmlFor="email">
-                  Email
-                </label>
-                <span className="field-hint">Your registered login email</span>
-              </div>
+              <label className="field-label" htmlFor="email">Email</label>
               <input
                 id="email"
                 className={`input ${fieldErrors.email ? 'error' : ''}`}
@@ -176,12 +181,7 @@ export default function LoginPage() {
             </div>
 
             <div className="field-group">
-              <div className="label-row">
-                <label className="field-label" htmlFor="password">
-                  Password
-                </label>
-                <span className="field-hint">Keep it private</span>
-              </div>
+              <label className="field-label" htmlFor="password">Password</label>
               <div className="input-row">
                 <input
                   id="password"
@@ -206,15 +206,14 @@ export default function LoginPage() {
 
             <div className="field-row">
               <button type="submit" className="primary-button" disabled={loading}>
-                {loading ? 'Signing in...' : 'Login'}
+                {loading ? 'Signing in...' : 'Sign in'}
               </button>
-              <div className="helper-text">Your JWT session will be stored locally after a successful sign-in.</div>
             </div>
 
             <div className="auth-link-row">
-              <span>Need an account?</span>
+              <span>New here?</span>
               <Link className="auth-link" to="/register">
-                Register here
+                Create an account
               </Link>
             </div>
           </form>
