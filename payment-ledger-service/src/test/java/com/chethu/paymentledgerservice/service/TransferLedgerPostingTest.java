@@ -61,7 +61,7 @@ class TransferLedgerPostingTest {
                 org.mockito.Mockito.mock(TransactionLimitService.class),
                 org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
                         com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
-                org.mockito.Mockito.mock(RiskAuditService.class));
+                org.mockito.Mockito.mock(RiskAuditService.class), org.mockito.Mockito.mock(NotificationEventService.class));
 
         AccountResponse response = service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00"), null);
 
@@ -123,7 +123,7 @@ class TransferLedgerPostingTest {
                 org.mockito.Mockito.mock(TransactionLimitService.class),
                 org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
                         com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
-                org.mockito.Mockito.mock(RiskAuditService.class));
+                org.mockito.Mockito.mock(RiskAuditService.class), org.mockito.Mockito.mock(NotificationEventService.class));
 
         service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00"), null);
 
@@ -151,7 +151,7 @@ class TransferLedgerPostingTest {
                     org.mockito.Mockito.mock(TransactionLimitService.class),
                     org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
                             com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
-                    org.mockito.Mockito.mock(RiskAuditService.class));
+                    org.mockito.Mockito.mock(RiskAuditService.class), org.mockito.Mockito.mock(NotificationEventService.class));
 
             assertThrows(AccountNotActiveException.class,
                     () -> service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00"), null));
@@ -177,7 +177,7 @@ class TransferLedgerPostingTest {
                 org.mockito.Mockito.mock(TransactionLimitService.class),
                 org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
                         com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
-                org.mockito.Mockito.mock(RiskAuditService.class));
+                org.mockito.Mockito.mock(RiskAuditService.class), org.mockito.Mockito.mock(NotificationEventService.class));
 
         assertThrows(InvalidTransferException.class,
                 () -> service.transferForCurrentUser(42L, transfer("ACC-SENDER", "100000.00"), null));
@@ -204,7 +204,7 @@ class TransferLedgerPostingTest {
                 org.mockito.Mockito.mock(TransactionLimitService.class),
                 org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
                         com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
-                org.mockito.Mockito.mock(RiskAuditService.class));
+                org.mockito.Mockito.mock(RiskAuditService.class), org.mockito.Mockito.mock(NotificationEventService.class));
 
         assertThrows(RuntimeException.class,
                 () -> service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "60000.00"), null));
@@ -236,7 +236,7 @@ class TransferLedgerPostingTest {
                 org.mockito.Mockito.mock(TransactionLimitService.class),
                 org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
                         com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
-                org.mockito.Mockito.mock(RiskAuditService.class));
+                org.mockito.Mockito.mock(RiskAuditService.class), org.mockito.Mockito.mock(NotificationEventService.class));
 
         assertThrows(IllegalStateException.class,
                 () -> service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00"), null));
@@ -268,7 +268,7 @@ class TransferLedgerPostingTest {
                 org.mockito.Mockito.mock(TransactionLimitService.class),
                 org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
                         com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
-                org.mockito.Mockito.mock(RiskAuditService.class));
+                org.mockito.Mockito.mock(RiskAuditService.class), org.mockito.Mockito.mock(NotificationEventService.class));
 
         assertThrows(IllegalStateException.class,
                 () -> service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00"), null));

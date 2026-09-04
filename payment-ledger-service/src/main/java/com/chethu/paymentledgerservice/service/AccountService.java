@@ -51,12 +51,13 @@ public class AccountService {
     private final TransactionLimitService transactionLimitService;
     private final RiskEvaluationService riskEvaluationService;
     private final RiskAuditService riskAuditService;
+    private final NotificationEventService notificationEventService;
 
     public AccountService(AccountRepository accountRepository,TransactionService transactionService,
             AccountNumberGenerator accountNumberGenerator, LedgerAccountRepository ledgerAccountRepository,
             JournalRepository journalRepository, IdempotencyService idempotencyService,
             TransactionLimitService transactionLimitService, RiskEvaluationService riskEvaluationService,
-            RiskAuditService riskAuditService){
+            RiskAuditService riskAuditService, NotificationEventService notificationEventService){
         this.accountRepository=accountRepository;
         this.transactionService = transactionService;
         this.accountNumberGenerator = accountNumberGenerator;
@@ -66,6 +67,7 @@ public class AccountService {
         this.transactionLimitService = transactionLimitService;
         this.riskEvaluationService = riskEvaluationService;
         this.riskAuditService = riskAuditService;
+        this.notificationEventService = notificationEventService;
     }
 
 
@@ -158,6 +160,7 @@ public class AccountService {
         idempotencyService.saveCompleted(account, IdempotencyOperationType.DEPOSIT, idempotencyKey,
                 request.getAmount(), null, account.getBalance(), posted.journal());
         recordFlagIfNeeded(account, LimitOperationType.DEPOSIT, request.getAmount(), risk);
+        notificationEventService.publishDepositSuccess(account, request.getAmount(), posted.journal().getReference());
         return posted.response();
     }
 
@@ -210,6 +213,7 @@ public class AccountService {
         idempotencyService.saveCompleted(account, IdempotencyOperationType.WITHDRAW, idempotencyKey,
                 request.getAmount(), null, account.getBalance(), posted.journal());
         recordFlagIfNeeded(account, LimitOperationType.WITHDRAW, request.getAmount(), risk);
+        notificationEventService.publishWithdrawSuccess(account, request.getAmount(), posted.journal().getReference());
         return posted.response();
     }
 
@@ -257,6 +261,8 @@ public class AccountService {
         idempotencyService.saveCompleted(sender, IdempotencyOperationType.TRANSFER, idempotencyKey,
                 request.getAmount(), request.getRecipientAccountNumber(), sender.getBalance(), posted.journal());
         recordFlagIfNeeded(sender, LimitOperationType.TRANSFER, request.getAmount(), risk);
+        notificationEventService.publishTransferSent(sender, recipient, request.getAmount(), posted.journal().getReference());
+        notificationEventService.publishTransferReceived(recipient, sender, request.getAmount(), posted.journal().getReference());
         return posted.response();
     }
 

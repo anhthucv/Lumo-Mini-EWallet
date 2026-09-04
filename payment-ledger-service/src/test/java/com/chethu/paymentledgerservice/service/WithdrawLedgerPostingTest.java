@@ -62,7 +62,7 @@ class WithdrawLedgerPostingTest {
                 org.mockito.Mockito.mock(TransactionLimitService.class),
                 org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
                         com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
-                org.mockito.Mockito.mock(RiskAuditService.class));
+                org.mockito.Mockito.mock(RiskAuditService.class), org.mockito.Mockito.mock(NotificationEventService.class));
 
         AccountResponse response = service.withdrawForCurrentUser(42L, money("100000.00"), null);
 
@@ -117,7 +117,7 @@ class WithdrawLedgerPostingTest {
                 org.mockito.Mockito.mock(TransactionLimitService.class),
                 org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
                         com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
-                org.mockito.Mockito.mock(RiskAuditService.class));
+                org.mockito.Mockito.mock(RiskAuditService.class), org.mockito.Mockito.mock(NotificationEventService.class));
 
         service.withdrawForCurrentUser(42L, money("100000.00"), null);
 
@@ -143,7 +143,7 @@ class WithdrawLedgerPostingTest {
                     org.mockito.Mockito.mock(TransactionLimitService.class),
                     org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
                             com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
-                    org.mockito.Mockito.mock(RiskAuditService.class));
+                    org.mockito.Mockito.mock(RiskAuditService.class), org.mockito.Mockito.mock(NotificationEventService.class));
 
             assertThrows(AccountNotActiveException.class,
                     () -> service.withdrawForCurrentUser(42L, money("100000.00"), null));
@@ -168,7 +168,7 @@ class WithdrawLedgerPostingTest {
                 org.mockito.Mockito.mock(TransactionLimitService.class),
                 org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
                         com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
-                org.mockito.Mockito.mock(RiskAuditService.class));
+                    org.mockito.Mockito.mock(RiskAuditService.class), org.mockito.Mockito.mock(NotificationEventService.class));
 
         assertThrows(RuntimeException.class,
                 () -> service.withdrawForCurrentUser(42L, money("60000.00"), null));

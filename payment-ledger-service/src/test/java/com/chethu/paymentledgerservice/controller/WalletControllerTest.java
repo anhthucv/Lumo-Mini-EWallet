@@ -182,7 +182,8 @@ class WalletControllerTest {
                     org.mockito.Mockito.mock(com.chethu.paymentledgerservice.service.RiskEvaluationService.class,
                             invocation -> new com.chethu.paymentledgerservice.service.RiskEvaluationResult(
                                     com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
-                    org.mockito.Mockito.mock(com.chethu.paymentledgerservice.service.RiskAuditService.class));
+                    org.mockito.Mockito.mock(com.chethu.paymentledgerservice.service.RiskAuditService.class),
+                    org.mockito.Mockito.mock(com.chethu.paymentledgerservice.service.NotificationEventService.class));
         }
 
         @Override

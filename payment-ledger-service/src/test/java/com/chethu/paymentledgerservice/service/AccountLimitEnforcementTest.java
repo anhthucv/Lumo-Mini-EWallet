@@ -39,7 +39,7 @@ class AccountLimitEnforcementTest {
                 mock(IdempotencyService.class), limits,
                 mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
                         com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
-                mock(RiskAuditService.class));
+                mock(RiskAuditService.class), mock(NotificationEventService.class));
         MoneyOperationRequest request = new MoneyOperationRequest();
         request.setAmount(new BigDecimal("51.00"));
 

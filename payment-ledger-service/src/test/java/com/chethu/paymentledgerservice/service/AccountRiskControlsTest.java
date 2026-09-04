@@ -53,7 +53,8 @@ class AccountRiskControlsTest {
 
         AccountService service = new AccountService(accounts, transactions,
                 org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgers, journals, idempotency,
-                org.mockito.Mockito.mock(TransactionLimitService.class), riskEvaluation, audit);
+                org.mockito.Mockito.mock(TransactionLimitService.class), riskEvaluation, audit,
+                org.mockito.Mockito.mock(NotificationEventService.class));
         MoneyOperationRequest request = new MoneyOperationRequest();
         request.setAmount(new BigDecimal("10000000.00"));
 
@@ -84,7 +85,8 @@ class AccountRiskControlsTest {
 
         AccountService service = new AccountService(accounts, transactions,
                 org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgers, journals, idempotency,
-                org.mockito.Mockito.mock(TransactionLimitService.class), riskEvaluation, audit);
+                org.mockito.Mockito.mock(TransactionLimitService.class), riskEvaluation, audit,
+                org.mockito.Mockito.mock(NotificationEventService.class));
         MoneyOperationRequest request = new MoneyOperationRequest();
         request.setAmount(new BigDecimal("100.00"));
 
