@@ -46,12 +46,12 @@ class NotificationPersistenceServiceTest {
         NotificationEntity notification = captor.getValue();
         assertEquals(user, notification.getUser());
         assertEquals(NotificationEventType.DEPOSIT_SUCCESS, notification.getType());
-        assertEquals("Deposit successful", notification.getTitle());
-        assertEquals("Your wallet was credited with 125000.00.", notification.getMessage());
+        assertEquals("Money added", notification.getTitle());
+        assertEquals("Your wallet received 125000.00.", notification.getMessage());
         assertEquals(new BigDecimal("125000.00"), notification.getAmount());
         assertEquals("DEPOSIT-1", notification.getTransactionReference());
         assertNull(notification.getReadAt());
-        assertEquals("Deposit successful", NotificationResponse.from(notification).title());
+        assertEquals("Money added", NotificationResponse.from(notification).title());
     }
 
     @Test

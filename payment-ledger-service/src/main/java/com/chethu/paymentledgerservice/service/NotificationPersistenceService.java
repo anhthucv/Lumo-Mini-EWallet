@@ -87,7 +87,7 @@ public class NotificationPersistenceService {
             String amount = event.amount().toPlainString();
             return switch (event.eventType()) {
                 case DEPOSIT_SUCCESS -> new NotificationContent(
-                        "Deposit successful", "Your wallet was credited with " + amount + ".");
+                        "Money added", "Your wallet received " + amount + ".");
                 case WITHDRAW_SUCCESS -> new NotificationContent(
                         "Withdrawal successful", "You withdrew " + amount + " from your wallet.");
                 case TRANSFER_SENT -> new NotificationContent(

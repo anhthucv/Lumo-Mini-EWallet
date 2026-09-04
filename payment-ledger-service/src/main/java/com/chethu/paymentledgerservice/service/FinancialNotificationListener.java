@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import com.chethu.paymentledgerservice.domain.NotificationEventType;
 import com.chethu.paymentledgerservice.entity.UserEntity;
 import com.chethu.paymentledgerservice.event.FinancialNotificationEvent;
 import com.chethu.paymentledgerservice.repository.UserRepository;
@@ -24,6 +25,10 @@ public class FinancialNotificationListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(FinancialNotificationEvent event) {
+        if (event.eventType() != NotificationEventType.DEPOSIT_SUCCESS
+                && event.eventType() != NotificationEventType.TRANSFER_RECEIVED) {
+            return;
+        }
         if (event.targetUserId() == null) {
             log.warn("Skipping financial notification without target user: eventType={}, reference={}",
                     event.eventType(), event.transactionReference());

@@ -13,8 +13,7 @@ import type { Notification } from '../types/notification';
 import NotificationBell from '../components/NotificationBell';
 import './notifications-page.css';
 import '../components/notifications.css';
-import './register.css';
-import './wallet.css';
+import './dashboard.css';
 
 const PAGE_SIZE = 20;
 const amountFormatter = new Intl.NumberFormat('vi-VN', {
@@ -37,7 +36,9 @@ function formatDate(createdAt: string): string {
 }
 
 function iconFor(type: Notification['type']): string {
-  return type === 'TRANSFER_SENT' || type === 'WITHDRAW_SUCCESS' ? 'OUT' : 'IN';
+  if (type === 'DEPOSIT_SUCCESS') return '+';
+  if (type === 'TRANSFER_RECEIVED') return '↙';
+  return '↗';
 }
 
 export default function NotificationsPage() {
@@ -120,25 +121,19 @@ export default function NotificationsPage() {
   }
 
   return (
-    <main className="register-shell wallet-shell notifications-shell">
-      <section className="wallet-card notifications-card" aria-labelledby="notifications-title">
-        <div className="wallet-topbar notifications-topbar">
-          <Link to="/dashboard" className="brand-row wallet-brand">
-            <div className="brand-mark">PL</div>
-            <div className="brand-copy"><small>Payment Ledger</small><strong>Notifications</strong></div>
-          </Link>
-          <div className="notifications-navigation">
-            <NotificationBell />
-            <Link to="/dashboard" className="secondary-button secondary-button-link">Dashboard</Link>
-            <Link to="/wallet" className="secondary-button secondary-button-link">My Wallet</Link>
-          </div>
-        </div>
+    <main className="dashboard-shell notifications-shell">
+      <div className="dashboard-container">
+        <header className="dashboard-header">
+          <Link to="/dashboard" className="dashboard-brand" aria-label="Lumo home"><span className="dashboard-brand-mark" aria-hidden="true"><i /></span><strong>Lumo</strong></Link>
+          <nav className="dashboard-nav" aria-label="Main navigation"><Link to="/dashboard">Home</Link><Link to="/wallet">Wallet</Link><Link to="/activity">Activity</Link></nav>
+          <div className="dashboard-header-actions"><NotificationBell /><Link to="/profile" className="dashboard-wallet-profile">Profile</Link></div>
+        </header>
 
         <div className="notifications-heading">
           <div>
-            <span className="deposit-kicker">Wallet activity</span>
+            <span className="notification-page-kicker">Incoming money</span>
             <h1 id="notifications-title">Notifications</h1>
-            <p>Review your recent deposit, withdrawal, and transfer activity.</p>
+            <p>Updates when money arrives in your wallet.</p>
           </div>
           <button
             type="button"
@@ -146,7 +141,7 @@ export default function NotificationsPage() {
             onClick={() => void handleMarkAllRead()}
             disabled={markingAll || unreadCount === 0}
           >
-            {markingAll ? 'Updating...' : 'Mark all as read'}
+            {markingAll ? 'Updating...' : 'Mark all read'}
           </button>
         </div>
 
@@ -160,8 +155,8 @@ export default function NotificationsPage() {
         )}
         {!loading && !error && items.length === 0 && (
           <div className="notification-page-state">
-            <strong>No notifications yet.</strong>
-            <span>Your wallet activity notifications will appear here.</span>
+            <strong>You’re all caught up.</strong>
+            <span>Money received in your wallet will appear here.</span>
           </div>
         )}
         {!loading && !error && items.length > 0 && (
@@ -193,7 +188,7 @@ export default function NotificationsPage() {
             <button type="button" className="secondary-button" onClick={() => setPage((current) => current + 1)} disabled={page >= totalPages - 1}>Next</button>
           </div>
         )}
-      </section>
+      </div>
     </main>
   );
 }

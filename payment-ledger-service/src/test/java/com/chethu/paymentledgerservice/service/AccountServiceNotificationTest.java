@@ -31,7 +31,7 @@ import com.chethu.paymentledgerservice.repository.LedgerAccountRepository;
 
 class AccountServiceNotificationTest {
     @Test
-    void successfulDepositAndWithdrawPublishOneEventEach() {
+    void successfulDepositPublishesOneEventAndWithdrawPublishesNone() {
         Fixture fixture = fixture();
         AccountEntity account = account("ACC-OWNER", 1L, "300000.00");
         when(fixture.accounts.findByUserId(42L)).thenReturn(Optional.of(account));
@@ -41,11 +41,11 @@ class AccountServiceNotificationTest {
         fixture.service.withdrawForCurrentUser(42L, money("100000.00"), null);
 
         verify(fixture.notifications).publishDepositSuccess(eq(account), eq(new BigDecimal("100000.00")), any());
-        verify(fixture.notifications).publishWithdrawSuccess(eq(account), eq(new BigDecimal("100000.00")), any());
+        verify(fixture.notifications, never()).publishWithdrawSuccess(any(), any(), any());
     }
 
     @Test
-    void successfulTransferPublishesSenderAndRecipientEvents() {
+    void successfulTransferPublishesRecipientEventOnly() {
         Fixture fixture = fixture();
         AccountEntity sender = account("ACC-SENDER", 1L, "300000.00");
         AccountEntity recipient = account("ACC-RECIPIENT", 2L, "50000.00");
@@ -56,10 +56,9 @@ class AccountServiceNotificationTest {
 
         fixture.service.transferForCurrentUser(42L, transfer("ACC-RECIPIENT", "100000.00"), null);
 
-        verify(fixture.notifications).publishTransferSent(eq(sender), eq(recipient),
-                eq(new BigDecimal("100000.00")), any());
         verify(fixture.notifications).publishTransferReceived(eq(recipient), eq(sender),
                 eq(new BigDecimal("100000.00")), any());
+        verify(fixture.notifications, never()).publishTransferSent(any(), any(), any(), any());
     }
 
     @Test

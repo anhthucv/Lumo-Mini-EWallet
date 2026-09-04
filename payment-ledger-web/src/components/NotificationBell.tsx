@@ -35,7 +35,9 @@ function formatRelativeTime(createdAt: string): string {
 }
 
 function getNotificationIcon(type: Notification['type']): string {
-  return type === 'TRANSFER_SENT' || type === 'WITHDRAW_SUCCESS' ? 'OUT' : 'IN';
+  if (type === 'DEPOSIT_SUCCESS') return '+';
+  if (type === 'TRANSFER_RECEIVED') return '↙';
+  return '↗';
 }
 
 function BellIcon() {
@@ -158,8 +160,8 @@ export default function NotificationBell() {
         <section className="notification-preview" id="notification-preview" aria-label="Notification preview">
           <div className="notification-preview-header">
             <div>
-              <span className="notification-kicker">Your activity</span>
               <h2>Notifications</h2>
+              <span className="notification-unread-label">{unreadCount} unread</span>
             </div>
             <button
               type="button"
@@ -167,7 +169,7 @@ export default function NotificationBell() {
               onClick={() => void handleMarkAllRead()}
               disabled={markingAll || unreadCount === 0}
             >
-              {markingAll ? 'Updating...' : 'Mark all as read'}
+              {markingAll ? 'Updating...' : 'Mark all read'}
             </button>
           </div>
           {unreadCountError && !error && <p className="notification-inline-error" role="status">{unreadCountError}</p>}
@@ -179,7 +181,7 @@ export default function NotificationBell() {
             </div>
           )}
           {!loading && !error && items.length === 0 && (
-            <div className="notification-state">No notifications yet.</div>
+            <div className="notification-state">You’re all caught up.</div>
           )}
           {!loading && !error && items.length > 0 && (
             <div className="notification-preview-list">
@@ -203,7 +205,7 @@ export default function NotificationBell() {
             </div>
           )}
           <Link to="/notifications" className="notification-view-all" onClick={() => setOpen(false)}>
-            View all notifications
+            View all notifications <span aria-hidden="true">→</span>
           </Link>
         </section>
       )}

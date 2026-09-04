@@ -43,8 +43,19 @@ class FinancialNotificationListenerTest {
                 .sendFinancialNotification(any(), any());
         FinancialNotificationListener listener = new FinancialNotificationListener(users, emailService);
 
-        assertDoesNotThrow(() -> listener.handle(event(42L, NotificationEventType.WITHDRAW_SUCCESS)));
+        assertDoesNotThrow(() -> listener.handle(event(42L, NotificationEventType.DEPOSIT_SUCCESS)));
         verify(emailService).sendFinancialNotification(eq("user@example.com"), any(FinancialNotificationEvent.class));
+    }
+
+    @Test
+    void legacyOutgoingEventDoesNotSendNewMail() {
+        UserRepository users = org.mockito.Mockito.mock(UserRepository.class);
+        EmailService emailService = org.mockito.Mockito.mock(EmailService.class);
+        FinancialNotificationListener listener = new FinancialNotificationListener(users, emailService);
+
+        listener.handle(event(42L, NotificationEventType.WITHDRAW_SUCCESS));
+
+        verify(emailService, never()).sendFinancialNotification(any(), any());
     }
 
     @Test

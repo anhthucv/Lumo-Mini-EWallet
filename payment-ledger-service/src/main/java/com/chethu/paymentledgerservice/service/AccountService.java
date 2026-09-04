@@ -213,7 +213,6 @@ public class AccountService {
         idempotencyService.saveCompleted(account, IdempotencyOperationType.WITHDRAW, idempotencyKey,
                 request.getAmount(), null, account.getBalance(), posted.journal());
         recordFlagIfNeeded(account, LimitOperationType.WITHDRAW, request.getAmount(), risk);
-        notificationEventService.publishWithdrawSuccess(account, request.getAmount(), posted.journal().getReference());
         return posted.response();
     }
 
@@ -261,7 +260,6 @@ public class AccountService {
         idempotencyService.saveCompleted(sender, IdempotencyOperationType.TRANSFER, idempotencyKey,
                 request.getAmount(), request.getRecipientAccountNumber(), sender.getBalance(), posted.journal());
         recordFlagIfNeeded(sender, LimitOperationType.TRANSFER, request.getAmount(), risk);
-        notificationEventService.publishTransferSent(sender, recipient, request.getAmount(), posted.journal().getReference());
         notificationEventService.publishTransferReceived(recipient, sender, request.getAmount(), posted.journal().getReference());
         return posted.response();
     }

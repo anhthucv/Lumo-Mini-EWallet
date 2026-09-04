@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -37,5 +38,16 @@ class FinancialNotificationPersistenceListenerTest {
 
         assertDoesNotThrow(() -> listener.handle(event));
         verify(persistence).persist(event);
+    }
+
+    @Test
+    void legacyOutgoingEventIsIgnored() {
+        NotificationPersistenceService persistence = org.mockito.Mockito.mock(NotificationPersistenceService.class);
+        FinancialNotificationPersistenceListener listener = new FinancialNotificationPersistenceListener(persistence);
+
+        listener.handle(new FinancialNotificationEvent(42L, NotificationEventType.TRANSFER_SENT, "REF-1",
+                new BigDecimal("1000.00"), LocalDateTime.now(), null));
+
+        verify(persistence, never()).persist(any());
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import com.chethu.paymentledgerservice.domain.NotificationEventType;
 import com.chethu.paymentledgerservice.event.FinancialNotificationEvent;
 
 @Component
@@ -20,6 +21,10 @@ public class FinancialNotificationPersistenceListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(FinancialNotificationEvent event) {
+        if (event.eventType() != NotificationEventType.DEPOSIT_SUCCESS
+                && event.eventType() != NotificationEventType.TRANSFER_RECEIVED) {
+            return;
+        }
         try {
             notificationPersistenceService.persist(event);
         } catch (Exception ex) {
