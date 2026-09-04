@@ -17,6 +17,7 @@ import com.chethu.paymentledgerservice.domain.AccountStatus;
 import com.chethu.paymentledgerservice.domain.AccountClass;
 import com.chethu.paymentledgerservice.domain.LedgerAccountType;
 import com.chethu.paymentledgerservice.domain.LedgerEntryType;
+import com.chethu.paymentledgerservice.domain.RiskDecision;
 import com.chethu.paymentledgerservice.dto.AccountResponse;
 import com.chethu.paymentledgerservice.dto.CreateAccountRequest;
 import com.chethu.paymentledgerservice.dto.MoneyOperationRequest;
@@ -34,6 +35,7 @@ import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
 import com.chethu.paymentledgerservice.exception.AccountNotActiveException;
 import com.chethu.paymentledgerservice.exception.InvalidAccountNumberException;
 import com.chethu.paymentledgerservice.exception.InvalidTransferException;
+import com.chethu.paymentledgerservice.exception.RiskRejectedException;
 import com.chethu.paymentledgerservice.repository.AccountRepository;
 import com.chethu.paymentledgerservice.repository.JournalRepository;
 import com.chethu.paymentledgerservice.repository.LedgerAccountRepository;
@@ -47,11 +49,14 @@ public class AccountService {
     private final JournalRepository journalRepository;
     private final IdempotencyService idempotencyService;
     private final TransactionLimitService transactionLimitService;
+    private final RiskEvaluationService riskEvaluationService;
+    private final RiskAuditService riskAuditService;
 
     public AccountService(AccountRepository accountRepository,TransactionService transactionService,
             AccountNumberGenerator accountNumberGenerator, LedgerAccountRepository ledgerAccountRepository,
             JournalRepository journalRepository, IdempotencyService idempotencyService,
-            TransactionLimitService transactionLimitService){
+            TransactionLimitService transactionLimitService, RiskEvaluationService riskEvaluationService,
+            RiskAuditService riskAuditService){
         this.accountRepository=accountRepository;
         this.transactionService = transactionService;
         this.accountNumberGenerator = accountNumberGenerator;
@@ -59,6 +64,8 @@ public class AccountService {
         this.journalRepository = journalRepository;
         this.idempotencyService = idempotencyService;
         this.transactionLimitService = transactionLimitService;
+        this.riskEvaluationService = riskEvaluationService;
+        this.riskAuditService = riskAuditService;
     }
 
 
@@ -146,9 +153,11 @@ public class AccountService {
         }
         ensureAccountActive(account);
         validateLimit(account, LimitOperationType.DEPOSIT, request.getAmount());
+        RiskEvaluationResult risk = evaluateRisk(account, LimitOperationType.DEPOSIT, request.getAmount());
         PostedOperation posted = depositToAccount(account, request);
         idempotencyService.saveCompleted(account, IdempotencyOperationType.DEPOSIT, idempotencyKey,
                 request.getAmount(), null, account.getBalance(), posted.journal());
+        recordFlagIfNeeded(account, LimitOperationType.DEPOSIT, request.getAmount(), risk);
         return posted.response();
     }
 
@@ -196,9 +205,11 @@ public class AccountService {
         }
         ensureAccountActive(account);
         validateLimit(account, LimitOperationType.WITHDRAW, request.getAmount());
+        RiskEvaluationResult risk = evaluateRisk(account, LimitOperationType.WITHDRAW, request.getAmount());
         PostedOperation posted = withdrawFromAccount(account,request);
         idempotencyService.saveCompleted(account, IdempotencyOperationType.WITHDRAW, idempotencyKey,
                 request.getAmount(), null, account.getBalance(), posted.journal());
+        recordFlagIfNeeded(account, LimitOperationType.WITHDRAW, request.getAmount(), risk);
         return posted.response();
     }
 
@@ -241,9 +252,11 @@ public class AccountService {
         ensureAccountActive(sender);
         ensureAccountActive(recipient);
         validateLimit(sender, LimitOperationType.TRANSFER, request.getAmount());
+        RiskEvaluationResult risk = evaluateRisk(sender, LimitOperationType.TRANSFER, request.getAmount());
         PostedOperation posted = transferBetweenAccounts(sender, recipient, request);
         idempotencyService.saveCompleted(sender, IdempotencyOperationType.TRANSFER, idempotencyKey,
                 request.getAmount(), request.getRecipientAccountNumber(), sender.getBalance(), posted.journal());
+        recordFlagIfNeeded(sender, LimitOperationType.TRANSFER, request.getAmount(), risk);
         return posted.response();
     }
 
@@ -254,8 +267,22 @@ public class AccountService {
     }
 
     private void validateLimit(AccountEntity account, LimitOperationType operation, BigDecimal amount) {
-        if (transactionLimitService != null) {
-            transactionLimitService.validate(account, operation, amount);
+        transactionLimitService.validate(account, operation, amount);
+    }
+
+    private RiskEvaluationResult evaluateRisk(AccountEntity account, LimitOperationType operation, BigDecimal amount) {
+        RiskEvaluationResult result = riskEvaluationService.evaluate(account, operation, amount);
+        if (result.decision() == RiskDecision.REJECT) {
+            riskAuditService.recordRejected(account, operation, amount, result);
+            throw new RiskRejectedException();
+        }
+        return result;
+    }
+
+    private void recordFlagIfNeeded(AccountEntity account, LimitOperationType operation, BigDecimal amount,
+            RiskEvaluationResult result) {
+        if (result.decision() == RiskDecision.FLAG) {
+            riskAuditService.recordFlagged(account, operation, amount, result);
         }
     }
 

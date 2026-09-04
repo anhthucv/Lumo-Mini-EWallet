@@ -71,6 +71,9 @@ function getErrorMessage(error: unknown): string {
 }
 
 function getDepositErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.code === 'RISK_REJECTED') {
+    return 'This deposit was rejected by transaction risk controls.';
+  }
   if (error instanceof ApiError && error.code === 'PER_TRANSACTION_LIMIT_EXCEEDED') {
     return 'This deposit exceeds the per-transaction limit.';
   }
@@ -90,6 +93,9 @@ function getDepositErrorMessage(error: unknown): string {
 }
 
 function getWithdrawErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.code === 'RISK_REJECTED') {
+    return 'This withdrawal was rejected by transaction risk controls.';
+  }
   if (error instanceof ApiError && error.code === 'PER_TRANSACTION_LIMIT_EXCEEDED') {
     return 'This withdrawal exceeds the per-transaction limit.';
   }
@@ -122,6 +128,9 @@ function getRecipientErrorMessage(error: unknown): string {
 }
 
 function getTransferErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.code === 'RISK_REJECTED') {
+    return 'This transfer was rejected by transaction risk controls.';
+  }
   if (error instanceof ApiError && error.code === 'PER_TRANSACTION_LIMIT_EXCEEDED') {
     return 'This transfer exceeds the per-transaction limit.';
   }

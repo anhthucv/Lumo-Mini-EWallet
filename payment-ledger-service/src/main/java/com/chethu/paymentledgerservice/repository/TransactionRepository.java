@@ -32,5 +32,19 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity,L
             @Param("status") TransactionStatus status,
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
+
+    @Query("""
+            select count(t)
+            from TransactionEntity t
+            where t.account = :account
+              and t.transactionType in :types
+              and t.status = :status
+              and t.createdAt >= :start
+            """)
+    long countByAccountAndTypesAndStatusSince(
+            @Param("account") AccountEntity account,
+            @Param("types") java.util.Collection<TransactionType> types,
+            @Param("status") TransactionStatus status,
+            @Param("start") LocalDateTime start);
 }
     

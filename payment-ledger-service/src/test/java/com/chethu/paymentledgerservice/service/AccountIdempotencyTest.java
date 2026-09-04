@@ -227,7 +227,10 @@ class AccountIdempotencyTest {
                     new TransactionService(transactionRepository, accountRepository),
                     org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository,
                     new IdempotencyService(idempotencyRepository),
-                    org.mockito.Mockito.mock(TransactionLimitService.class));
+                    org.mockito.Mockito.mock(TransactionLimitService.class),
+                    org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
+                            com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
+                    org.mockito.Mockito.mock(RiskAuditService.class));
         }
     }
 }

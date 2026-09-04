@@ -53,6 +53,14 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void riskRejected_shouldUseConflictAndSafeMessage() {
+        ErrorResponse response = handler.handleRiskRejected(new RiskRejectedException(), request).getBody();
+
+        assertStandard(response, 409, "RISK_REJECTED", "/wallet/deposit");
+        assertEquals("Transaction was rejected by risk controls.", response.getMessage());
+    }
+
+    @Test
     void validation_shouldIncludeSafeFieldErrorsWithoutRejectedValues() {
         BindingResult bindingResult = mock(BindingResult.class);
         when(bindingResult.getFieldErrors()).thenReturn(List.of(

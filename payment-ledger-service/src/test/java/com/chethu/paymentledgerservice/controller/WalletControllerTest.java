@@ -177,7 +177,12 @@ class WalletControllerTest {
                     org.mockito.Mockito.mock(LedgerAccountRepository.class),
                     org.mockito.Mockito.mock(JournalRepository.class),
                     new com.chethu.paymentledgerservice.service.IdempotencyService(
-                            org.mockito.Mockito.mock(IdempotencyRecordRepository.class)));
+                            org.mockito.Mockito.mock(IdempotencyRecordRepository.class)),
+                    org.mockito.Mockito.mock(com.chethu.paymentledgerservice.service.TransactionLimitService.class),
+                    org.mockito.Mockito.mock(com.chethu.paymentledgerservice.service.RiskEvaluationService.class,
+                            invocation -> new com.chethu.paymentledgerservice.service.RiskEvaluationResult(
+                                    com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
+                    org.mockito.Mockito.mock(com.chethu.paymentledgerservice.service.RiskAuditService.class));
         }
 
         @Override

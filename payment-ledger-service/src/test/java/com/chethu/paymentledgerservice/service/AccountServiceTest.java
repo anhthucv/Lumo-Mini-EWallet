@@ -266,7 +266,10 @@ class AccountServiceTest {
                 ledgerAccountRepository, journalRepository,
                 new IdempotencyService(org.mockito.Mockito.mock(
                         com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)),
-                org.mockito.Mockito.mock(TransactionLimitService.class));
+                org.mockito.Mockito.mock(TransactionLimitService.class),
+                org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
+                        com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
+                org.mockito.Mockito.mock(RiskAuditService.class));
 
         AccountEntity account = new AccountEntity("ACC-999999999999", "Nguyen Van A");
         setId(account, 77L);
@@ -471,7 +474,10 @@ class AccountServiceTest {
                 ledgerAccountRepository, journalRepository,
                 new IdempotencyService(org.mockito.Mockito.mock(
                         com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)),
-                org.mockito.Mockito.mock(TransactionLimitService.class));
+                org.mockito.Mockito.mock(TransactionLimitService.class),
+                org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
+                        com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
+                org.mockito.Mockito.mock(RiskAuditService.class));
     }
 
     private TransferRequest transferRequest(String recipientAccountNumber, String amount) {

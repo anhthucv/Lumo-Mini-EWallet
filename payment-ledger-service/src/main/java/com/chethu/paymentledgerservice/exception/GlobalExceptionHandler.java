@@ -134,6 +134,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.CONFLICT, "DAILY_TRANSACTION_LIMIT_EXCEEDED", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(RiskRejectedException.class)
+    public ResponseEntity<ErrorResponse> handleRiskRejected(RiskRejectedException ex, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "RISK_REJECTED", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException ex,
             HttpServletRequest request) {

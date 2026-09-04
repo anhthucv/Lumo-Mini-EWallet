@@ -36,7 +36,10 @@ class AccountLimitEnforcementTest {
 
         AccountService service = new AccountService(accounts, mock(TransactionService.class),
                 mock(AccountNumberGenerator.class), mock(LedgerAccountRepository.class), mock(JournalRepository.class),
-                mock(IdempotencyService.class), limits);
+                mock(IdempotencyService.class), limits,
+                mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
+                        com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
+                mock(RiskAuditService.class));
         MoneyOperationRequest request = new MoneyOperationRequest();
         request.setAmount(new BigDecimal("51.00"));
 

@@ -56,7 +56,10 @@ class DepositLedgerPostingTest {
                 org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository,
                 new IdempotencyService(org.mockito.Mockito.mock(
                         com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)),
-                org.mockito.Mockito.mock(TransactionLimitService.class));
+                org.mockito.Mockito.mock(TransactionLimitService.class),
+                org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
+                        com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
+                org.mockito.Mockito.mock(RiskAuditService.class));
 
         AccountResponse response = service.depositForCurrentUser(42L, money("100000.00"), null);
 
@@ -107,7 +110,10 @@ class DepositLedgerPostingTest {
                 org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgerAccountRepository, journalRepository,
                 new IdempotencyService(org.mockito.Mockito.mock(
                         com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)),
-                org.mockito.Mockito.mock(TransactionLimitService.class));
+                org.mockito.Mockito.mock(TransactionLimitService.class),
+                org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
+                        com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
+                org.mockito.Mockito.mock(RiskAuditService.class));
 
         service.depositForCurrentUser(42L, money("100000.00"), null);
         service.depositForCurrentUser(42L, money("50000.00"), null);
@@ -130,7 +136,10 @@ class DepositLedgerPostingTest {
                 ledgerAccountRepository, journalRepository,
                 new IdempotencyService(org.mockito.Mockito.mock(
                         com.chethu.paymentledgerservice.repository.IdempotencyRecordRepository.class)),
-                org.mockito.Mockito.mock(TransactionLimitService.class));
+                org.mockito.Mockito.mock(TransactionLimitService.class),
+                org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
+                        com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
+                org.mockito.Mockito.mock(RiskAuditService.class));
 
         assertThrows(AccountNotActiveException.class,
                 () -> service.depositForCurrentUser(42L, money("100000.00"), null));

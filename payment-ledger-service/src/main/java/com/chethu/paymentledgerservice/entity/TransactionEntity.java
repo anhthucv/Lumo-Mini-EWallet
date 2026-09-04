@@ -22,7 +22,8 @@ import org.hibernate.annotations.Check;
 
 @Entity
 @Table(name = "transactions", indexes = {
-        @Index(name = "idx_transactions_account_created_at", columnList = "account_id, created_at")
+        @Index(name = "idx_transactions_account_created_at", columnList = "account_id, created_at"),
+        @Index(name = "idx_transactions_risk_velocity", columnList = "account_id, status, type, created_at")
 })
 @Check(name = "ck_transactions_amount_positive", constraints = "amount > 0")
 public class TransactionEntity {

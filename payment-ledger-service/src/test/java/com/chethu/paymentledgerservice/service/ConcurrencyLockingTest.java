@@ -154,7 +154,10 @@ class ConcurrencyLockingTest {
         when(accounts.save(any(AccountEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         return new AccountService(accounts, new TransactionService(transactions, accounts),
                 org.mockito.Mockito.mock(AccountNumberGenerator.class), ledgers, journals, idempotency,
-                org.mockito.Mockito.mock(TransactionLimitService.class));
+                org.mockito.Mockito.mock(TransactionLimitService.class),
+                org.mockito.Mockito.mock(RiskEvaluationService.class, invocation -> new RiskEvaluationResult(
+                        com.chethu.paymentledgerservice.domain.RiskDecision.ALLOW, java.util.List.of())),
+                org.mockito.Mockito.mock(RiskAuditService.class));
     }
 
     private AccountEntity account(String number, Long id, String balance) {
