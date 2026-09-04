@@ -93,6 +93,12 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.NOT_FOUND, "TRANSACTION_NOT_FOUND", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(NotificationNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotificationNotFound(NotificationNotFoundException ex,
+            HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "NOTIFICATION_NOT_FOUND", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(InvalidTransactionStatusTransitionException.class)
     public ResponseEntity<ErrorResponse> handleInvalidTransactionStatusTransition(
             InvalidTransactionStatusTransitionException ex, HttpServletRequest request) {
