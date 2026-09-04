@@ -31,6 +31,9 @@ import type {
 } from '../types/wallet';
 import './register.css';
 import './wallet.css';
+import './dashboard.css';
+
+type WalletOperation = 'transfer' | 'deposit' | 'withdraw';
 
 const vndFormatter = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -216,7 +219,7 @@ function getLimitValidationMessage(amount: number, limit: TransactionLimit, oper
 
 export default function WalletPage() {
   const navigate = useNavigate();
-  const { logout, user } = useAuth();
+  const { logout } = useAuth();
   const [wallet, setWallet] = useState<MyWalletResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -231,6 +234,7 @@ export default function WalletPage() {
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
   const [withdrawSuccess, setWithdrawSuccess] = useState<string | null>(null);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [activeOperation, setActiveOperation] = useState<WalletOperation>('transfer');
   const [recipientAccountNumber, setRecipientAccountNumber] = useState('');
   const [recipient, setRecipient] = useState<RecipientResponse | null>(null);
   const [recipientError, setRecipientError] = useState<string | null>(null);
@@ -671,35 +675,30 @@ export default function WalletPage() {
   }
 
   return (
-    <main className="register-shell wallet-shell">
+    <main className="dashboard-shell wallet-shell lumo-wallet-shell">
       <section className="wallet-card" aria-labelledby="wallet-title">
-        <div className="wallet-topbar">
-          <Link to="/dashboard" className="brand-row wallet-brand">
-            <div className="brand-mark">PL</div>
-            <div className="brand-copy">
-              <small>Payment Ledger</small>
-              <strong>My Wallet</strong>
-            </div>
+        <div className="dashboard-header wallet-topbar">
+          <Link to="/dashboard" className="dashboard-brand" aria-label="Lumo home">
+            <span className="dashboard-brand-mark" aria-hidden="true"><i /></span>
+            <strong>Lumo</strong>
           </Link>
+          <nav className="dashboard-nav" aria-label="Wallet navigation">
+            <Link to="/dashboard">Home</Link>
+            <Link className="active" to="/wallet">Wallet</Link>
+            <Link to="/notifications">Activity</Link>
+            <Link to="/beneficiaries">People</Link>
+          </nav>
+          <div className="dashboard-header-actions">
           <NotificationBell />
-          <Link to="/dashboard" className="secondary-button secondary-button-link">
-            Dashboard
-          </Link>
-          <Link to="/profile" className="secondary-button secondary-button-link">
-            Profile
-          </Link>
-          <Link to="/beneficiaries" className="secondary-button secondary-button-link">
-            Beneficiaries
-          </Link>
+          <Link to="/profile" className="dashboard-wallet-profile">Profile</Link>
+          </div>
         </div>
 
-        <div className="wallet-heading">
+        <div className="wallet-heading lumo-wallet-heading">
           <div>
-            <span className="hero-kicker">Authenticated wallet</span>
-            <h1 id="wallet-title">Your money, clearly accounted for.</h1>
-            <p>Review the wallet connected to your authenticated Payment Ledger account.</p>
+            <h1 id="wallet-title">Wallet</h1>
+            <p>Manage your balance and move money.</p>
           </div>
-          {wallet && <div className="status-pill">{wallet.status}</div>}
         </div>
 
         {loading && (
@@ -720,37 +719,38 @@ export default function WalletPage() {
 
         {!loading && !error && wallet && (
           <div className="wallet-content">
-            <div className="balance-panel">
-              <span>Current balance</span>
+            <div className="wallet-workspace">
+            <div className="wallet-summary-column">
+              <div className="balance-panel lumo-balance-panel">
+              <span>Available balance</span>
               <strong>{formatBalance(wallet.balance)}</strong>
-              <small>Available balance in your wallet</small>
+              <small>Wallet {formatBeneficiaryAccount(wallet.accountNumber)}</small>
+              </div>
+              <details className="wallet-details-disclosure">
+                <summary>Wallet details</summary>
+                <dl className="wallet-details-list">
+                  <div><dt>Account number</dt><dd>{wallet.accountNumber}</dd></div>
+                  <div><dt>Owner</dt><dd>{wallet.ownerName}</dd></div>
+                  <div><dt>Status</dt><dd>{wallet.status}</dd></div>
+                  <div><dt>Account ID</dt><dd>{wallet.accountId}</dd></div>
+                </dl>
+              </details>
             </div>
-            <div className="wallet-details" aria-label="Wallet details">
-              <div className="summary-item">
-                <span>Account number</span>
-                <strong>{wallet.accountNumber}</strong>
-              </div>
-              <div className="summary-item">
-                <span>Owner name</span>
-                <strong>{user?.fullName ?? wallet.ownerName}</strong>
-              </div>
-              <div className="summary-item">
-                <span>Account status</span>
-                <strong>{wallet.status}</strong>
-              </div>
-              <div className="summary-item">
-                <span>Account ID</span>
-                <strong>{wallet.accountId}</strong>
-              </div>
-            </div>
+            <div className="wallet-operation-column">
             {limitsError && <div className="banner error" role="status">{limitsError}</div>}
-            <form className="deposit-panel" onSubmit={handleDeposit} noValidate>
+            <section className="wallet-operation" aria-label="Wallet operations">
+              <div className="wallet-operation-switcher" role="tablist" aria-label="Choose wallet operation">
+                <button type="button" role="tab" aria-selected={activeOperation === 'transfer'} className={activeOperation === 'transfer' ? 'active transfer-tab' : 'transfer-tab'} onClick={() => setActiveOperation('transfer')}>Send</button>
+                <button type="button" role="tab" aria-selected={activeOperation === 'deposit'} className={activeOperation === 'deposit' ? 'active deposit-tab' : 'deposit-tab'} onClick={() => setActiveOperation('deposit')}>Add money</button>
+                <button type="button" role="tab" aria-selected={activeOperation === 'withdraw'} className={activeOperation === 'withdraw' ? 'active withdraw-tab' : 'withdraw-tab'} onClick={() => setActiveOperation('withdraw')}>Withdraw</button>
+              </div>
+              {activeOperation === 'deposit' && <form className="deposit-panel" onSubmit={handleDeposit} noValidate>
               <div className="deposit-heading">
                 <div>
                   <span className="deposit-kicker">Add funds</span>
                   <h2>Deposit to this wallet</h2>
                 </div>
-                <span className="deposit-minimum">Minimum 1 VND</span>
+                <span className="deposit-minimum">Minimum 1,000 ₫</span>
               </div>
               {limits && <div className="limit-summary">
                 <span>Per-transaction limit: {formatBalance(limits.deposit.perTransactionLimit)}</span>
@@ -779,14 +779,14 @@ export default function WalletPage() {
               <button type="submit" className="primary-button deposit-button" disabled={depositing}>
                 {depositing ? 'Processing deposit...' : 'Deposit funds'}
               </button>
-            </form>
-            <form className="deposit-panel withdraw-panel" onSubmit={handleWithdraw} noValidate>
+              </form>}
+            {activeOperation === 'withdraw' && <form className="deposit-panel withdraw-panel" onSubmit={handleWithdraw} noValidate>
               <div className="deposit-heading">
                 <div>
                   <span className="deposit-kicker">Move money out</span>
                   <h2>Withdraw from this wallet</h2>
                 </div>
-                <span className="deposit-minimum">Minimum 1 VND</span>
+                <span className="deposit-minimum">Minimum 1,000 ₫</span>
               </div>
               {limits && <div className="limit-summary">
                 <span>Per-transaction limit: {formatBalance(limits.withdraw.perTransactionLimit)}</span>
@@ -815,14 +815,14 @@ export default function WalletPage() {
               <button type="submit" className="primary-button deposit-button" disabled={withdrawing}>
                 {withdrawing ? 'Processing withdrawal...' : 'Withdraw funds'}
               </button>
-            </form>
-            <section className="deposit-panel transfer-panel" aria-labelledby="transfer-title">
+              </form>}
+            {activeOperation === 'transfer' && <section className="deposit-panel transfer-panel" aria-labelledby="transfer-title">
               <div className="deposit-heading">
                 <div>
                   <span className="deposit-kicker">Send money</span>
                   <h2 id="transfer-title">Transfer to another wallet</h2>
                 </div>
-                <span className="deposit-minimum">Minimum 1 VND</span>
+                <span className="deposit-minimum">Minimum 1,000 ₫</span>
               </div>
               {limits && <div className="limit-summary">
                 <span>Per-transaction limit: {formatBalance(limits.transfer.perTransactionLimit)}</span>
@@ -933,7 +933,12 @@ export default function WalletPage() {
                   {transferring ? 'Processing transfer...' : 'Transfer funds'}
                 </button>
               </form>
+            </section>}
             </section>
+            </div>
+            </div>
+            <details className="wallet-history-disclosure">
+              <summary>View transaction history</summary>
             <section className="history-panel" aria-labelledby="history-title">
               <div className="history-heading">
                 <div>
@@ -1141,6 +1146,7 @@ export default function WalletPage() {
                 </section>
               )}
             </section>
+            </details>
           </div>
         )}
       </section>
