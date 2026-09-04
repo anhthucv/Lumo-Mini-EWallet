@@ -8,14 +8,7 @@ import { useAuth } from '../auth/AuthContext';
 import type { ProfileResponse } from '../types/profile';
 import './profile.css';
 import './register.css';
-
-function formatCreatedAt(createdAt: string | null): string {
-  if (!createdAt) return 'Not available';
-  const date = new Date(createdAt);
-  return Number.isNaN(date.getTime())
-    ? createdAt
-    : new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
-}
+import './dashboard.css';
 
 function getProfileErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 404) return 'Your profile could not be found.';
@@ -55,6 +48,7 @@ export default function ProfilePage() {
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [editingProfile, setEditingProfile] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -168,27 +162,24 @@ export default function ProfilePage() {
     }
   }
 
-  return (
-    <main className="register-shell profile-shell">
-      <section className="profile-card" aria-labelledby="profile-title">
-        <div className="profile-topbar">
-          <Link to="/dashboard" className="brand-row profile-brand">
-            <div className="brand-mark">PL</div>
-            <div className="brand-copy"><small>Payment Ledger</small><strong>My Profile</strong></div>
-          </Link>
-          <div className="profile-navigation">
-            <NotificationBell />
-            <Link to="/dashboard" className="secondary-button secondary-button-link">Dashboard</Link>
-            <Link to="/wallet" className="secondary-button secondary-button-link">My Wallet</Link>
-            <Link to="/beneficiaries" className="secondary-button secondary-button-link">Beneficiaries</Link>
-          </div>
-        </div>
+  function handleSignOut() {
+    logout();
+    navigate('/login', { replace: true });
+  }
 
-        <div className="profile-heading">
-          <span className="hero-kicker">Authenticated profile</span>
-          <h1 id="profile-title">Keep your account details current.</h1>
-          <p>Review your verified account information and update your display name.</p>
-        </div>
+  function getInitials(name: string): string {
+    return name.trim().split(/\s+/).filter(Boolean).slice(-2).map((part) => part[0]).join('').toUpperCase() || 'LU';
+  }
+
+  return (
+    <main className="dashboard-shell profile-shell">
+      <div className="dashboard-container">
+        <header className="dashboard-header">
+          <Link to="/dashboard" className="dashboard-brand" aria-label="Lumo home"><span className="dashboard-brand-mark" aria-hidden="true"><i /></span><strong>Lumo</strong></Link>
+          <nav className="dashboard-nav" aria-label="Main navigation"><Link to="/dashboard">Home</Link><Link to="/wallet">Wallet</Link><Link to="/activity">Activity</Link></nav>
+          <div className="dashboard-header-actions"><NotificationBell /><Link className="dashboard-wallet-profile active-profile" to="/profile">Profile</Link></div>
+        </header>
+        <div className="profile-heading"><span className="profile-kicker">Account</span><h1 id="profile-title">Profile</h1><p>Manage your account and security.</p></div>
 
         {loading && <div className="profile-state" role="status" aria-live="polite"><span className="loading-dot" aria-hidden="true" />Loading your profile...</div>}
         {!loading && error && (
@@ -199,34 +190,22 @@ export default function ProfilePage() {
         )}
 
         {!loading && !error && profile && (
-          <div className="profile-content">
-            <section className="profile-panel" aria-labelledby="profile-information-title">
-              <div className="profile-panel-heading">
-                <div><span className="profile-kicker">Read-only information</span><h2 id="profile-information-title">Account profile</h2></div>
-                <span className="status-pill">{profile.status}</span>
-              </div>
-              <dl className="profile-details">
-                <div><dt>User ID</dt><dd>{profile.userId}</dd></div>
-                <div><dt>Email</dt><dd>{profile.email}</dd></div>
-                <div><dt>Role</dt><dd>{profile.role}</dd></div>
-                <div><dt>Status</dt><dd>{profile.status}</dd></div>
-                <div><dt>Created</dt><dd>{formatCreatedAt(profile.createdAt)}</dd></div>
-              </dl>
+          <div className="profile-workspace">
+            <aside className="profile-sidebar">
+            <section className="profile-panel profile-overview" aria-labelledby="profile-overview-title">
+              <div className="profile-identity"><div className="profile-avatar" aria-hidden="true">{getInitials(profile.fullName)}</div><div><h2 id="profile-overview-title">{profile.fullName}</h2><p>{profile.email}</p><span className={`profile-status ${profile.status.toLowerCase()}`}><i aria-hidden="true" />{profile.status.toLowerCase()}</span></div></div>
+            </section>
+              <section className="profile-account-actions" aria-label="Account actions"><button type="button" className="signout-button" onClick={handleSignOut}>Sign out</button></section>
+            </aside>
+            <div className="profile-main-column">
+
+            <section className="profile-panel personal-panel" aria-labelledby="personal-information-title">
+              <div className="profile-panel-heading"><div><span className="profile-kicker">Personal details</span><h2 id="personal-information-title">Personal information</h2></div>{!editingProfile && <button type="button" className="profile-edit-trigger" onClick={() => { setEditingProfile(true); setFormError(null); setSuccess(null); }}>Edit</button>}</div>
+              {!editingProfile ? <dl className="profile-details"><div><dt>Full name</dt><dd>{profile.fullName}</dd></div><div><dt>Email</dt><dd>{profile.email}</dd></div></dl> : <form className="profile-edit" onSubmit={handleSubmit} noValidate><label className="field-group" htmlFor="profile-full-name"><span className="field-label">Full name</span><input id="profile-full-name" className="input" value={fullName} onChange={(event) => { setFullName(event.target.value); setFormError(null); setSuccess(null); }} maxLength={100} disabled={saving} autoFocus /></label>{formError && <div className="banner error" role="alert">{formError}</div>}{success && <div className="banner success" role="status">{success}</div>}<div className="profile-form-actions"><button type="button" className="secondary-button" onClick={() => { setEditingProfile(false); setFullName(profile.fullName); setFormError(null); }} disabled={saving}>Cancel</button><button type="submit" className="primary-button" disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</button></div></form>}
             </section>
 
-            <form className="profile-panel profile-edit" onSubmit={handleSubmit} noValidate>
-              <div className="profile-panel-heading"><div><span className="profile-kicker">Editable information</span><h2>Display name</h2></div></div>
-              <label className="field-group" htmlFor="profile-full-name">
-                <span className="field-label">Full name</span>
-                <input id="profile-full-name" className="input" value={fullName} onChange={(event) => { setFullName(event.target.value); setFormError(null); setSuccess(null); }} maxLength={100} disabled={saving} />
-              </label>
-              {formError && <div className="banner error" role="alert">{formError}</div>}
-              {success && <div className="banner success" role="status">{success}</div>}
-              <button type="submit" className="primary-button profile-save" disabled={saving}>{saving ? 'Saving profile...' : 'Save changes'}</button>
-            </form>
-
             <form className="profile-panel profile-edit" onSubmit={handlePasswordSubmit} noValidate>
-              <div className="profile-panel-heading"><div><span className="profile-kicker">Account security</span><h2>Change password</h2></div></div>
+              <div className="profile-panel-heading"><div><span className="profile-kicker">Security</span><h2>Change password</h2><p className="profile-section-copy">Keep your account secure with a new password.</p></div></div>
               <label className="field-group" htmlFor="current-password">
                 <span className="field-label">Current password</span>
                 <input id="current-password" className="input" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => { setCurrentPassword(event.target.value); setPasswordError(null); setPasswordSuccess(null); }} disabled={passwordSaving} />
@@ -242,12 +221,13 @@ export default function ProfilePage() {
               {passwordError && <div className="banner error" role="alert">{passwordError}</div>}
               {passwordSuccess && <div className="banner success" role="status">{passwordSuccess}</div>}
               <button type="submit" className="primary-button profile-save" disabled={passwordSaving}>
-                {passwordSaving ? 'Changing password...' : 'Change password'}
+                {passwordSaving ? 'Updating...' : 'Update password'}
               </button>
             </form>
+            </div>
           </div>
         )}
-      </section>
+      </div>
     </main>
   );
 }
