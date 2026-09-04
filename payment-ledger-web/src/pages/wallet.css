@@ -193,6 +193,25 @@
   color: #fecdd3;
 }
 
+.saved-recipients-error,
+.saved-recipients-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.saved-recipients-retry {
+  min-height: 36px;
+  padding-inline: 12px;
+  font-size: 0.86rem;
+}
+
+.saved-recipients-status {
+  color: var(--primary);
+  font-size: 0.86rem;
+}
+
 .transfer-lookup {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

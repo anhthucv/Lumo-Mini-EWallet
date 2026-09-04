@@ -251,6 +251,7 @@ export default function WalletPage() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+  const [beneficiariesRetryKey, setBeneficiariesRetryKey] = useState(0);
   const [draftFilters, setDraftFilters] = useState<TransactionFilters>({});
   const [activeFilters, setActiveFilters] = useState<TransactionFilters>({});
   const [filterError, setFilterError] = useState<string | null>(null);
@@ -261,6 +262,7 @@ export default function WalletPage() {
   const depositAttempt = useRef<IdempotencyAttempt | null>(null);
   const withdrawAttempt = useRef<IdempotencyAttempt | null>(null);
   const transferAttempt = useRef<IdempotencyAttempt | null>(null);
+  const recipientInputRef = useRef<HTMLInputElement>(null);
 
   async function refreshLimits() {
     try {
@@ -309,7 +311,7 @@ export default function WalletPage() {
     void loadBeneficiaries();
 
     return () => controller.abort();
-  }, [logout, navigate]);
+  }, [beneficiariesRetryKey, logout, navigate]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -582,6 +584,7 @@ export default function WalletPage() {
         navigate('/login', { replace: true });
         return;
       }
+      setSelectedBeneficiaryId(null);
       setRecipientError(getRecipientErrorMessage(requestError));
     } finally {
       setLookingUpRecipient(false);
@@ -596,6 +599,7 @@ export default function WalletPage() {
   function selectBeneficiary(beneficiary: Beneficiary) {
     handleRecipientChange(beneficiary.accountNumber);
     setSelectedBeneficiaryId(beneficiary.id);
+    recipientInputRef.current?.focus();
     void lookupRecipient(beneficiary.accountNumber);
   }
 
@@ -642,6 +646,7 @@ export default function WalletPage() {
       setRecipientAccountNumber('');
       setTransferAmount('');
       setRecipient(null);
+      setSelectedBeneficiaryId(null);
       transferAttempt.current = null;
       setTransferSuccess(
         `Transferred ${formatBalance(numericAmount)} to ${response.accountNumber}. Updated balance: ${formatBalance(response.balance)}.`,
@@ -836,7 +841,14 @@ export default function WalletPage() {
                 )}
                 {!beneficiariesLoading && beneficiariesError && (
                   <div className="saved-recipients-state saved-recipients-error" role="status">
-                    {beneficiariesError}
+                    <span>{beneficiariesError}</span>
+                    <button
+                      type="button"
+                      className="secondary-button saved-recipients-retry"
+                      onClick={() => setBeneficiariesRetryKey((key) => key + 1)}
+                    >
+                      Try again
+                    </button>
                   </div>
                 )}
                 {!beneficiariesLoading && !beneficiariesError && beneficiaries.length === 0 && (
@@ -861,6 +873,11 @@ export default function WalletPage() {
                     ))}
                   </div>
                 )}
+                {lookingUpRecipient && (
+                  <div className="saved-recipients-status" role="status" aria-live="polite">
+                    Checking recipient details...
+                  </div>
+                )}
               </div>
               <form className="transfer-lookup" onSubmit={handleRecipientLookup} noValidate>
                 <label className="field-group" htmlFor="recipient-account-number">
@@ -868,6 +885,7 @@ export default function WalletPage() {
                   <input
                     id="recipient-account-number"
                     className="input"
+                    ref={recipientInputRef}
                     value={recipientAccountNumber}
                     onChange={(event) => handleRecipientChange(event.target.value)}
                     placeholder="ACC-123456"
