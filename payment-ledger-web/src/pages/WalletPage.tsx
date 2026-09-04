@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { ApiError } from '../api/http';
-import { getBeneficiaries } from '../api/beneficiaryApi';
+import { createBeneficiary, deleteBeneficiary, getBeneficiaries, updateBeneficiary } from '../api/beneficiaryApi';
 import NotificationBell from '../components/NotificationBell';
 import { getOrCreateIdempotencyAttempt, type IdempotencyAttempt } from '../api/idempotency';
 import {
@@ -211,6 +211,19 @@ export default function WalletPage() {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [beneficiariesRetryKey, setBeneficiariesRetryKey] = useState(0);
+  const [addRecipientOpen, setAddRecipientOpen] = useState(false);
+  const [addRecipientFromManage, setAddRecipientFromManage] = useState(false);
+  const [newRecipientAccount, setNewRecipientAccount] = useState('');
+  const [newRecipientNickname, setNewRecipientNickname] = useState('');
+  const [addRecipientError, setAddRecipientError] = useState<string | null>(null);
+  const [addingRecipient, setAddingRecipient] = useState(false);
+  const [manageRecipientsOpen, setManageRecipientsOpen] = useState(false);
+  const [editingRecipientId, setEditingRecipientId] = useState<number | null>(null);
+  const [editingRecipientNickname, setEditingRecipientNickname] = useState('');
+  const [updatingRecipientId, setUpdatingRecipientId] = useState<number | null>(null);
+  const [deletingRecipientId, setDeletingRecipientId] = useState<number | null>(null);
+  const [confirmDeleteRecipientId, setConfirmDeleteRecipientId] = useState<number | null>(null);
+  const [manageRecipientError, setManageRecipientError] = useState<string | null>(null);
   const depositAttempt = useRef<IdempotencyAttempt | null>(null);
   const withdrawAttempt = useRef<IdempotencyAttempt | null>(null);
   const transferAttempt = useRef<IdempotencyAttempt | null>(null);
@@ -498,6 +511,113 @@ export default function WalletPage() {
     return accountNumber.length > 4 ? `**** ${accountNumber.slice(-4)}` : accountNumber;
   }
 
+  function closeAddRecipient() {
+    if (addingRecipient) return;
+    setAddRecipientOpen(false);
+    setAddRecipientError(null);
+    setNewRecipientAccount('');
+    setNewRecipientNickname('');
+    setAddRecipientFromManage(false);
+  }
+
+  function closeManageRecipients() {
+    if (updatingRecipientId !== null || deletingRecipientId !== null) return;
+    setManageRecipientsOpen(false);
+    setEditingRecipientId(null);
+    setConfirmDeleteRecipientId(null);
+    setManageRecipientError(null);
+  }
+
+  useEffect(() => {
+    if (!addRecipientOpen && !manageRecipientsOpen) return;
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        if (addRecipientOpen) closeAddRecipient();
+        else closeManageRecipients();
+      }
+    }
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [addRecipientOpen, addingRecipient, manageRecipientsOpen, updatingRecipientId, deletingRecipientId]);
+
+  async function handleAddRecipient(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const accountNumber = newRecipientAccount.trim();
+    const nickname = newRecipientNickname.trim();
+    setAddRecipientError(null);
+    if (!accountNumber || !nickname) {
+      setAddRecipientError('Account number and nickname are required.');
+      return;
+    }
+    setAddingRecipient(true);
+    try {
+      await createBeneficiary({ accountNumber, nickname });
+      setAddRecipientOpen(false);
+      setNewRecipientAccount('');
+      setNewRecipientNickname('');
+      setAddRecipientFromManage(false);
+      setManageRecipientsOpen(addRecipientFromManage);
+      setBeneficiariesRetryKey((key) => key + 1);
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) {
+        logout();
+        navigate('/login', { replace: true });
+        return;
+      }
+      if (requestError instanceof ApiError && requestError.code === 'ACCOUNT_NOT_FOUND') {
+        setAddRecipientError('No account was found with that account number.');
+      } else if (requestError instanceof ApiError && requestError.code === 'BENEFICIARY_ALREADY_EXISTS') {
+        setAddRecipientError('That account is already in your saved recipients.');
+      } else if (requestError instanceof ApiError && requestError.status === 400) {
+        setAddRecipientError(requestError.message || 'Enter a valid account number and nickname.');
+      } else {
+        setAddRecipientError('The recipient could not be saved. Please try again.');
+      }
+    } finally {
+      setAddingRecipient(false);
+    }
+  }
+
+  function startRecipientEdit(beneficiary: Beneficiary) {
+    setManageRecipientError(null);
+    setConfirmDeleteRecipientId(null);
+    setEditingRecipientId(beneficiary.id);
+    setEditingRecipientNickname(beneficiary.nickname);
+  }
+
+  async function saveRecipientNickname(id: number) {
+    const nickname = editingRecipientNickname.trim();
+    if (!nickname) { setManageRecipientError('Nickname must not be blank.'); return; }
+    setUpdatingRecipientId(id);
+    setManageRecipientError(null);
+    try {
+      const updated = await updateBeneficiary(id, { nickname });
+      setBeneficiaries((current) => current.map((item) => item.id === id ? updated : item));
+      setEditingRecipientId(null);
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) { logout(); navigate('/login', { replace: true }); return; }
+      if (requestError instanceof ApiError && requestError.status === 404) setManageRecipientError('This saved recipient is no longer available.');
+      else setManageRecipientError(requestError instanceof ApiError ? requestError.message || 'The nickname could not be updated.' : 'The server could not be reached. Please try again.');
+    } finally { setUpdatingRecipientId(null); }
+  }
+
+  async function removeRecipient(beneficiary: Beneficiary) {
+    setDeletingRecipientId(beneficiary.id);
+    setManageRecipientError(null);
+    try {
+      await deleteBeneficiary(beneficiary.id);
+      setBeneficiaries((current) => current.filter((item) => item.id !== beneficiary.id));
+      if (selectedBeneficiaryId === beneficiary.id) {
+        setSelectedBeneficiaryId(null);
+        setRecipient(null);
+      }
+      setConfirmDeleteRecipientId(null);
+    } catch (requestError) {
+      if (requestError instanceof ApiError && requestError.status === 401) { logout(); navigate('/login', { replace: true }); return; }
+      setManageRecipientError(requestError instanceof ApiError ? requestError.message || 'The recipient could not be removed.' : 'The server could not be reached. Please try again.');
+    } finally { setDeletingRecipientId(null); }
+  }
+
   async function handleTransfer(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setTransferError(null);
@@ -572,7 +692,6 @@ export default function WalletPage() {
             <Link to="/dashboard">Home</Link>
             <Link className="active" to="/wallet">Wallet</Link>
             <Link to="/activity">Activity</Link>
-            <Link to="/beneficiaries">People</Link>
           </nav>
           <div className="dashboard-header-actions">
           <NotificationBell />
@@ -720,9 +839,11 @@ export default function WalletPage() {
                     <span className="deposit-kicker">Quick select</span>
                     <h3 id="saved-recipients-title">Saved recipients</h3>
                   </div>
-                  {!beneficiariesLoading && beneficiaries.length > 0 && (
-                    <span className="history-count">{beneficiaries.length} saved</span>
-                  )}
+                  <div className="saved-recipients-actions">
+                    {!beneficiariesLoading && beneficiaries.length > 0 && <span className="history-count">{beneficiaries.length} saved</span>}
+                    <button type="button" className="saved-recipient-add" onClick={() => { setAddRecipientError(null); setAddRecipientOpen(true); }}>+ Add recipient</button>
+                    {beneficiaries.length > 0 && <button type="button" className="saved-recipient-manage" onClick={() => { setManageRecipientError(null); setManageRecipientsOpen(true); }}>Manage <span aria-hidden="true">→</span></button>}
+                  </div>
                 </div>
                 {beneficiariesLoading && (
                   <div className="saved-recipients-state" role="status">Loading saved recipients...</div>
@@ -740,7 +861,7 @@ export default function WalletPage() {
                   </div>
                 )}
                 {!beneficiariesLoading && !beneficiariesError && beneficiaries.length === 0 && (
-                  <div className="saved-recipients-state">No saved recipients yet.</div>
+                  <div className="saved-recipients-state">No saved recipients yet. <button type="button" className="saved-recipient-add" onClick={() => setAddRecipientOpen(true)}>+ Add recipient</button></div>
                 )}
                 {!beneficiariesLoading && beneficiaries.length > 0 && (
                   <div className="saved-recipient-list">
@@ -870,6 +991,39 @@ export default function WalletPage() {
           </div>
         )}
       </section>
+      {manageRecipientsOpen && (
+        <div className="recipient-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeManageRecipients(); }}>
+          <section className="recipient-modal recipient-manage-modal" role="dialog" aria-modal="true" aria-labelledby="manage-recipients-title">
+            <div className="recipient-modal-heading"><div><span className="deposit-kicker">Saved recipients</span><h2 id="manage-recipients-title">Manage recipients</h2><p className="recipient-modal-description">People you send money to.</p></div><button type="button" className="recipient-modal-close" onClick={closeManageRecipients} aria-label="Close saved recipients">×</button></div>
+            <div className="managed-recipient-list">
+              {beneficiaries.map((beneficiary) => (
+                <article className="managed-recipient" key={beneficiary.id}>
+                  {editingRecipientId === beneficiary.id ? (
+                    <div className="managed-recipient-edit"><label className="field-group" htmlFor={`edit-recipient-${beneficiary.id}`}><span className="field-label">Nickname</span><input id={`edit-recipient-${beneficiary.id}`} className="input" value={editingRecipientNickname} onChange={(event) => setEditingRecipientNickname(event.target.value)} disabled={updatingRecipientId === beneficiary.id} autoFocus /></label><div className="managed-recipient-actions"><button type="button" className="secondary-button" onClick={() => setEditingRecipientId(null)} disabled={updatingRecipientId === beneficiary.id}>Cancel</button><button type="button" className="primary-button" onClick={() => void saveRecipientNickname(beneficiary.id)} disabled={updatingRecipientId === beneficiary.id}>{updatingRecipientId === beneficiary.id ? 'Saving...' : 'Save'}</button></div></div>
+                  ) : (
+                    <><div className="managed-recipient-info"><strong>{beneficiary.nickname}</strong><span>{beneficiary.recipientOwnerName}</span><small>{formatBeneficiaryAccount(beneficiary.accountNumber)}</small></div><div className="managed-recipient-actions">{confirmDeleteRecipientId === beneficiary.id ? <><span className="managed-recipient-confirm">Remove “{beneficiary.nickname}”?</span><button type="button" className="secondary-button" onClick={() => setConfirmDeleteRecipientId(null)}>Cancel</button><button type="button" className="danger-button" onClick={() => void removeRecipient(beneficiary)} disabled={deletingRecipientId === beneficiary.id}>{deletingRecipientId === beneficiary.id ? 'Removing...' : 'Remove'}</button></> : <><button type="button" className="secondary-button" onClick={() => startRecipientEdit(beneficiary)} disabled={deletingRecipientId !== null}>Edit</button><button type="button" className="danger-button" onClick={() => setConfirmDeleteRecipientId(beneficiary.id)} disabled={deletingRecipientId !== null}>Remove</button></>}</div></>
+                  )}
+                </article>
+              ))}
+            </div>
+            {manageRecipientError && <div className="banner error" role="alert">{manageRecipientError}</div>}
+            <button type="button" className="saved-recipient-add managed-recipient-add" onClick={() => { setAddRecipientFromManage(true); setAddRecipientOpen(true); }} disabled={updatingRecipientId !== null || deletingRecipientId !== null}>+ Add recipient</button>
+          </section>
+        </div>
+      )}
+      {addRecipientOpen && (
+        <div className="recipient-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeAddRecipient(); }}>
+          <section className="recipient-modal" role="dialog" aria-modal="true" aria-labelledby="add-recipient-title">
+            <div className="recipient-modal-heading"><div><span className="deposit-kicker">Saved recipients</span><h2 id="add-recipient-title">Add recipient</h2></div><button type="button" className="recipient-modal-close" onClick={closeAddRecipient} aria-label="Close add recipient dialog">×</button></div>
+            <form onSubmit={handleAddRecipient} noValidate>
+              <label className="field-group" htmlFor="new-recipient-account"><span className="field-label">Account number</span><input id="new-recipient-account" className="input" value={newRecipientAccount} onChange={(event) => setNewRecipientAccount(event.target.value)} disabled={addingRecipient} autoComplete="off" autoFocus /></label>
+              <label className="field-group" htmlFor="new-recipient-nickname"><span className="field-label">Nickname</span><input id="new-recipient-nickname" className="input" value={newRecipientNickname} onChange={(event) => setNewRecipientNickname(event.target.value)} disabled={addingRecipient} autoComplete="off" /></label>
+              {addRecipientError && <div className="banner error" role="alert">{addRecipientError}</div>}
+              <div className="recipient-modal-actions"><button type="button" className="secondary-button" onClick={closeAddRecipient} disabled={addingRecipient}>Cancel</button><button type="submit" className="primary-button" disabled={addingRecipient}>{addingRecipient ? 'Saving...' : 'Save recipient'}</button></div>
+            </form>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

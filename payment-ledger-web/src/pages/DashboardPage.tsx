@@ -129,8 +129,7 @@ export default function DashboardPage() {
           <nav className="dashboard-nav" aria-label="Main navigation">
             <Link className="active" to="/dashboard">Home</Link>
             <Link to="/wallet">Wallet</Link>
-            <Link to="/notifications">Activity</Link>
-            <Link to="/beneficiaries">People</Link>
+            <Link to="/activity">Activity</Link>
           </nav>
           <div className="dashboard-header-actions">
             <NotificationBell />
@@ -183,10 +182,10 @@ export default function DashboardPage() {
           </section>
 
           <section className="dashboard-surface dashboard-people" aria-labelledby="people-title">
-            <div className="dashboard-section-heading"><div><span className="dashboard-section-kicker">Quick people</span><h2 id="people-title">Send again</h2></div><Link to="/beneficiaries">Manage</Link></div>
+            <div className="dashboard-section-heading"><div><span className="dashboard-section-kicker">Quick people</span><h2 id="people-title">Send again</h2></div><Link to="/wallet">Manage</Link></div>
             {peopleLoading && <div className="dashboard-section-state" role="status">Loading saved people...</div>}
             {!peopleLoading && peopleError && <div className="dashboard-section-state dashboard-section-error">{peopleError}</div>}
-            {!peopleLoading && !peopleError && beneficiaries.length === 0 && <div className="dashboard-section-state"><span>No saved recipients yet.</span><Link to="/beneficiaries">Add someone</Link></div>}
+            {!peopleLoading && !peopleError && beneficiaries.length === 0 && <div className="dashboard-section-state"><span>No saved recipients yet.</span><Link to="/wallet">Add someone</Link></div>}
             {!peopleLoading && !peopleError && beneficiaries.length > 0 && <div className="dashboard-people-list">{beneficiaries.slice(0, 4).map((beneficiary) => <Link className="dashboard-person" to="/wallet" key={beneficiary.id}><span className="dashboard-person-avatar">{getInitials(beneficiary.nickname)}</span><span><strong>{beneficiary.nickname}</strong><small>{beneficiary.recipientOwnerName}</small></span></Link>)}</div>}
           </section>
         </div>

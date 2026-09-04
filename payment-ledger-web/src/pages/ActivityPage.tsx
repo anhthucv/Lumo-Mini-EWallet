@@ -119,7 +119,6 @@ export default function ActivityPage() {
           <Link to="/dashboard">Home</Link>
           <Link to="/wallet">Wallet</Link>
           <Link className="active" to="/activity">Activity</Link>
-          <Link to="/beneficiaries">People</Link>
         </nav>
         <div className="dashboard-header-actions">
           <NotificationBell />

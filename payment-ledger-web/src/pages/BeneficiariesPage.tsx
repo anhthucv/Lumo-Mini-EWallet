@@ -59,6 +59,7 @@ export default function BeneficiariesPage() {
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
@@ -151,14 +152,13 @@ export default function BeneficiariesPage() {
   }
 
   async function handleDelete(beneficiary: Beneficiary) {
-    if (!window.confirm(`Remove ${beneficiary.nickname} from your saved beneficiaries?`)) return;
-
     setDeletingId(beneficiary.id);
     setActionError(null);
     setSuccess(null);
     try {
       await deleteBeneficiary(beneficiary.id);
       setBeneficiaries((current) => current.filter((item) => item.id !== beneficiary.id));
+      setConfirmDeleteId(null);
       setSuccess('Beneficiary removed.');
     } catch (error) {
       if (!handleUnauthorized(error)) setActionError(getDeleteErrorMessage(error));
@@ -168,34 +168,20 @@ export default function BeneficiariesPage() {
   }
 
   return (
-    <main className="register-shell beneficiary-shell">
-      <section className="beneficiary-card" aria-labelledby="beneficiary-title">
-        <div className="beneficiary-topbar">
-          <Link to="/dashboard" className="brand-row">
-            <div className="brand-mark">PL</div>
-            <div className="brand-copy"><small>Payment Ledger</small><strong>Saved Beneficiaries</strong></div>
-          </Link>
-          <div className="beneficiary-navigation">
-            <NotificationBell />
-            <Link to="/dashboard" className="secondary-button secondary-button-link">Dashboard</Link>
-            <Link to="/wallet" className="secondary-button secondary-button-link">My Wallet</Link>
-            <Link to="/profile" className="secondary-button secondary-button-link">Profile</Link>
-          </div>
-        </div>
-
+    <main className="dashboard-shell beneficiary-shell">
+      <div className="dashboard-container">
+        <header className="dashboard-header">
+          <Link to="/dashboard" className="dashboard-brand" aria-label="Lumo home"><span className="dashboard-brand-mark" aria-hidden="true"><i /></span><strong>Lumo</strong></Link>
+          <nav className="dashboard-nav" aria-label="Main navigation"><Link to="/dashboard">Home</Link><Link to="/wallet">Wallet</Link><Link to="/activity">Activity</Link></nav>
+          <div className="dashboard-header-actions"><NotificationBell /><Link to="/profile" className="dashboard-wallet-profile">Profile</Link></div>
+        </header>
         <div className="beneficiary-heading">
-          <div>
-            <span className="hero-kicker">Authenticated address book</span>
-            <h1 id="beneficiary-title">Keep trusted recipients close.</h1>
-            <p>Save account details for your own reference. Beneficiaries are private to your account.</p>
-          </div>
-          <span className="status-pill">Private list</span>
+          <div><span className="beneficiary-kicker">Recipients</span><h1 id="beneficiary-title">Saved recipients</h1><p>Manage people you send money to.</p></div>
         </div>
-
         <div className="beneficiary-content">
           <section className="beneficiary-panel" aria-labelledby="add-beneficiary-title">
             <div className="beneficiary-panel-heading">
-              <div><span className="beneficiary-kicker">New contact</span><h2 id="add-beneficiary-title">Add a beneficiary</h2></div>
+              <div><h2 id="add-beneficiary-title">Add recipient</h2></div>
             </div>
             <form className="beneficiary-form" onSubmit={handleCreate} noValidate>
               <div className="beneficiary-field">
@@ -206,7 +192,7 @@ export default function BeneficiariesPage() {
                 <label htmlFor="beneficiary-nickname">Nickname</label>
                 <input id="beneficiary-nickname" className="input" value={nickname} onChange={(event) => setNickname(event.target.value)} disabled={creating} autoComplete="off" />
               </div>
-              <button type="submit" className="primary-button" disabled={creating}>{creating ? 'Saving...' : 'Save beneficiary'}</button>
+              <button type="submit" className="primary-button" disabled={creating}>{creating ? 'Saving...' : '+ Add recipient'}</button>
             </form>
             {createError && <div className="banner error" role="alert">{createError}</div>}
             {success && <div className="banner success" role="status">{success}</div>}
@@ -215,7 +201,7 @@ export default function BeneficiariesPage() {
 
           <section className="beneficiary-panel" aria-labelledby="saved-beneficiaries-title">
             <div className="beneficiary-panel-heading">
-              <div><span className="beneficiary-kicker">Your contacts</span><h2 id="saved-beneficiaries-title">Saved beneficiaries</h2></div>
+              <div><h2 id="saved-beneficiaries-title">Saved recipients</h2></div>
               {!loading && !loadingError && <span className="status-pill">{beneficiaries.length} saved</span>}
             </div>
 
@@ -239,7 +225,7 @@ export default function BeneficiariesPage() {
                         <span className="beneficiary-owner">Recipient: {beneficiary.recipientOwnerName}</span>
                       </div>
                     )}
-                    {editingId !== beneficiary.id && <div className="beneficiary-actions"><button type="button" className="secondary-button" onClick={() => startEditing(beneficiary)} disabled={creating || updatingId !== null || deletingId !== null}>Edit nickname</button><button type="button" className="danger-button" onClick={() => void handleDelete(beneficiary)} disabled={creating || updatingId !== null || deletingId !== null}> {deletingId === beneficiary.id ? 'Removing...' : 'Remove'} </button></div>}
+                    {editingId !== beneficiary.id && <div className="beneficiary-actions">{confirmDeleteId === beneficiary.id ? <><span className="beneficiary-confirm">Remove “{beneficiary.nickname}”?</span><button type="button" className="secondary-button" onClick={() => setConfirmDeleteId(null)}>Cancel</button><button type="button" className="danger-button" onClick={() => void handleDelete(beneficiary)} disabled={deletingId === beneficiary.id}>{deletingId === beneficiary.id ? 'Removing...' : 'Remove'}</button></> : <><button type="button" className="secondary-button" onClick={() => startEditing(beneficiary)} disabled={creating || updatingId !== null || deletingId !== null}>Edit nickname</button><button type="button" className="danger-button" onClick={() => setConfirmDeleteId(beneficiary.id)} disabled={creating || updatingId !== null || deletingId !== null}>Remove</button></>}</div>}
                   </article>
                 ))}
               </div>
@@ -247,7 +233,7 @@ export default function BeneficiariesPage() {
             {actionError && <div className="banner error" role="alert">{actionError}</div>}
           </section>
         </div>
-      </section>
+      </div>
     </main>
   );
 }
