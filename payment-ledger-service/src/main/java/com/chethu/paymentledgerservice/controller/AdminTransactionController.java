@@ -17,13 +17,19 @@ import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.dto.AdminTransactionDetailResponse;
 import com.chethu.paymentledgerservice.dto.AdminTransactionResponse;
 import com.chethu.paymentledgerservice.service.AdminTransactionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 @RestController
 @RequestMapping("/api/admin/transactions")
+@Tag(name = "Admin Transactions", description = "ADMIN-only transaction investigation")
+@SecurityRequirement(name = "bearerAuth")
 public class AdminTransactionController {
     private final AdminTransactionService service;
     public AdminTransactionController(AdminTransactionService service) { this.service = service; }
     @GetMapping
+    @Operation(summary = "List all transactions for administration")
     public Page<AdminTransactionResponse> list(@RequestParam(required = false) String search,
             @RequestParam(required = false) TransactionType type, @RequestParam(required = false) TransactionStatus status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -32,6 +38,7 @@ public class AdminTransactionController {
         return service.list(search, type, status, from, to, pageable);
     }
     @GetMapping("/{id}")
+    @Operation(summary = "Get an administrative transaction detail")
     public ResponseEntity<AdminTransactionDetailResponse> detail(@PathVariable Long id) {
         return ResponseEntity.ok(service.detail(id));
     }

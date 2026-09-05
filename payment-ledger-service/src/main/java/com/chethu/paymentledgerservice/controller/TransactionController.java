@@ -21,10 +21,15 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.domain.TransactionStatus;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 
 @RestController
 @RequestMapping("/transactions")
+@Tag(name = "Transactions", description = "Authenticated transaction history")
+@SecurityRequirement(name = "bearerAuth")
 public class TransactionController {
     private final TransactionService transactionService;
     public TransactionController(TransactionService service){
@@ -32,6 +37,7 @@ public class TransactionController {
     }
 
     @GetMapping
+    @Operation(summary = "List my transaction history")
     public ResponseEntity<Page<TransactionResponse>> getHistory(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @RequestParam(defaultValue = "0") int page,
@@ -104,6 +110,7 @@ public class TransactionController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Get one of my transactions")
     public ResponseEntity<TransactionResponse> getTransaction(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @PathVariable Long id) {

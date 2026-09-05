@@ -20,9 +20,14 @@ import com.chethu.paymentledgerservice.service.TopUpService;
 import com.chethu.paymentledgerservice.service.TopUpStatusSyncService;
 
 import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 @RestController
 @RequestMapping("/topups")
+@Tag(name = "Top-ups", description = "Authenticated payOS wallet top-ups")
+@SecurityRequirement(name = "bearerAuth")
 public class TopUpController {
     private final TopUpService topUpService;
     private final TopUpStatusSyncService topUpStatusSyncService;
@@ -38,6 +43,7 @@ public class TopUpController {
     }
 
     @PostMapping
+    @Operation(summary = "Create a top-up checkout")
     public ResponseEntity<TopUpResponse> create(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
@@ -50,6 +56,7 @@ public class TopUpController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Get my top-up")
     public TopUpResponse get(@AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @PathVariable Long id) {
         requirePrincipal(principal);
@@ -57,6 +64,7 @@ public class TopUpController {
     }
 
     @PostMapping("/{id}/sync")
+    @Operation(summary = "Synchronize my top-up status")
     public TopUpResponse sync(@AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @PathVariable Long id) {
         requirePrincipal(principal);

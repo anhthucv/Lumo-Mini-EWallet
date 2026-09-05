@@ -24,9 +24,12 @@ import com.chethu.paymentledgerservice.service.LoginService;
 import com.chethu.paymentledgerservice.service.RegistrationService;
 
 import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/auth")
+@Tag(name = "Authentication", description = "Registration, email verification, login, and current-user access")
 public class AuthController {
     private final EmailVerificationService emailVerificationService;
     private final RegistrationService registrationService;
@@ -40,24 +43,28 @@ public class AuthController {
     }
 
     @PostMapping("/register/send-code")
+    @Operation(summary = "Send registration verification code")
     public ResponseEntity<VerificationCodeResponse> sendCode(@Valid @RequestBody SendVerificationCodeRequest request) {
         VerificationCodeResponse response = emailVerificationService.sendRegistrationCode(request.getEmail());
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/register")
+    @Operation(summary = "Register a verified user")
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
         RegisterResponse response = registrationService.register(request);
         return ResponseEntity.status(201).body(response);
     }
 
     @PostMapping("/login")
+    @Operation(summary = "Authenticate a user")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = loginService.login(request);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")
+    @Operation(summary = "Get the authenticated user")
     public ResponseEntity<CurrentUserResponse> me(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             Authentication authentication) {

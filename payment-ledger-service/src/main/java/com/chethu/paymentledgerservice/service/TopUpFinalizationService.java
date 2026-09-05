@@ -76,6 +76,8 @@ public class TopUpFinalizationService {
             return;
         }
         if (payment.getStatus() != TopUpPaymentStatus.PENDING) {
+            log.info("ignoring top-up status for finalized payment orderCode={} status={}",
+                    payment.getMerchantOrderCode(), payment.getStatus());
             return;
         }
         if (providerStatus.status() == ProviderPaymentStatus.PENDING) {
@@ -108,6 +110,8 @@ public class TopUpFinalizationService {
         payment.markSuccessful(transaction, journal);
         topUpPaymentRepository.save(payment);
         notificationEventService.publishDepositSuccess(account, payment.getAmount(), journal.getReference());
+        log.info("top-up finalized orderCode={} status={} amount={} journalReference={}",
+                payment.getMerchantOrderCode(), payment.getStatus(), payment.getAmount(), journal.getReference());
     }
 
     private void validateFinancialData(TopUpPaymentEntity payment, ProviderPaymentStatusResult providerStatus) {

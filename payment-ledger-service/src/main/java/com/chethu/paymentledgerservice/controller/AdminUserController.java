@@ -19,9 +19,14 @@ import com.chethu.paymentledgerservice.service.AdminUserService;
 
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestParam;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 @RestController
 @RequestMapping("/api/admin/users")
+@Tag(name = "Admin Users", description = "ADMIN-only user administration")
+@SecurityRequirement(name = "bearerAuth")
 public class AdminUserController {
     private final AdminUserService adminUserService;
 
@@ -30,6 +35,7 @@ public class AdminUserController {
     }
 
     @GetMapping
+    @Operation(summary = "List users")
     public Page<AdminUserResponse> list(
             @RequestParam(required = false) String search,
             @PageableDefault(size = 20, sort = "createdAt", direction = org.springframework.data.domain.Sort.Direction.DESC)
@@ -38,6 +44,7 @@ public class AdminUserController {
     }
 
     @PostMapping("/{userId}/lock")
+    @Operation(summary = "Lock a user")
     public ResponseEntity<AdminUserResponse> lock(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @PathVariable Long userId,
@@ -46,6 +53,7 @@ public class AdminUserController {
     }
 
     @PostMapping("/{userId}/unlock")
+    @Operation(summary = "Unlock a user")
     public ResponseEntity<AdminUserResponse> unlock(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @PathVariable Long userId,

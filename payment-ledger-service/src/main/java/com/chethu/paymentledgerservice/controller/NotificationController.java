@@ -19,9 +19,14 @@ import com.chethu.paymentledgerservice.dto.NotificationResponse;
 import com.chethu.paymentledgerservice.dto.UnreadCountResponse;
 import com.chethu.paymentledgerservice.security.AuthenticatedUserPrincipal;
 import com.chethu.paymentledgerservice.service.NotificationPersistenceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 @RestController
 @RequestMapping("/notifications")
+@Tag(name = "Notifications", description = "Authenticated financial notifications")
+@SecurityRequirement(name = "bearerAuth")
 public class NotificationController {
     private final NotificationPersistenceService notificationPersistenceService;
 
@@ -30,6 +35,7 @@ public class NotificationController {
     }
 
     @GetMapping
+    @Operation(summary = "List my notifications")
     public ResponseEntity<Page<NotificationResponse>> findAll(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @RequestParam(defaultValue = "0") int page,
@@ -42,6 +48,7 @@ public class NotificationController {
     }
 
     @GetMapping("/unread-count")
+    @Operation(summary = "Get my unread notification count")
     public ResponseEntity<UnreadCountResponse> unreadCount(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
         requirePrincipal(principal);
@@ -49,6 +56,7 @@ public class NotificationController {
     }
 
     @PatchMapping("/{id}/read")
+    @Operation(summary = "Mark one notification as read")
     public ResponseEntity<NotificationResponse> markRead(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @PathVariable Long id) {
@@ -57,6 +65,7 @@ public class NotificationController {
     }
 
     @PatchMapping("/read-all")
+    @Operation(summary = "Mark all notifications as read")
     public ResponseEntity<MarkAllNotificationsReadResponse> markAllRead(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
         requirePrincipal(principal);

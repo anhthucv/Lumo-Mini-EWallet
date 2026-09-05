@@ -3,6 +3,8 @@ package com.chethu.paymentledgerservice.service;
 import java.math.BigDecimal;
 
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.chethu.paymentledgerservice.domain.TopUpPaymentStatus;
 import com.chethu.paymentledgerservice.dto.TopUpRequest;
@@ -19,6 +21,7 @@ import com.chethu.paymentledgerservice.repository.TopUpPaymentRepository;
 
 @Service
 public class TopUpService {
+    private static final Logger log = LoggerFactory.getLogger(TopUpService.class);
     private static final BigDecimal MINIMUM_AMOUNT = new BigDecimal("1000.00");
     private static final String CURRENCY = "VND";
 
@@ -61,7 +64,10 @@ public class TopUpService {
                 payment.getMerchantOrderCode(), request.amount(), CURRENCY,
                 "LUMO " + payment.getMerchantOrderCode());
         PaymentCheckoutResult checkout = paymentProvider.createCheckout(checkoutRequest);
-        return TopUpResponse.from(persistenceService.attachCheckout(payment.getId(), checkout));
+        TopUpPaymentEntity attachedPayment = persistenceService.attachCheckout(payment.getId(), checkout);
+        log.info("top-up checkout created userId={} topUpId={} orderCode={} amount={}", userId,
+                attachedPayment.getId(), attachedPayment.getMerchantOrderCode(), attachedPayment.getAmount());
+        return TopUpResponse.from(attachedPayment);
     }
 
     public TopUpResponse getForCurrentUser(Long userId, Long topUpId) {

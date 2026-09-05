@@ -9,12 +9,18 @@ import org.springframework.web.bind.annotation.*;
 import com.chethu.paymentledgerservice.domain.AuditAction;
 import com.chethu.paymentledgerservice.dto.AdminAuditLogResponse;
 import com.chethu.paymentledgerservice.service.AdminAuditLogService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 @RestController
 @RequestMapping("/api/admin/audit-logs")
+@Tag(name = "Admin Audit Logs", description = "ADMIN-only audit history")
+@SecurityRequirement(name = "bearerAuth")
 public class AdminAuditLogController {
     private final AdminAuditLogService service;
     public AdminAuditLogController(AdminAuditLogService service) { this.service = service; }
     @GetMapping
+    @Operation(summary = "List audit logs")
     public Page<AdminAuditLogResponse> list(@RequestParam(required = false) String search,
             @RequestParam(required = false) AuditAction action,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -22,5 +28,7 @@ public class AdminAuditLogController {
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         return service.list(search, action, from, to, pageable);
     }
-    @GetMapping("/{id}") public AdminAuditLogResponse detail(@PathVariable Long id) { return service.detail(id); }
+    @GetMapping("/{id}")
+    @Operation(summary = "Get an audit log detail")
+    public AdminAuditLogResponse detail(@PathVariable Long id) { return service.detail(id); }
 }

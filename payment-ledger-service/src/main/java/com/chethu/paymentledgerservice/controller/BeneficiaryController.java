@@ -22,9 +22,14 @@ import com.chethu.paymentledgerservice.security.AuthenticatedUserPrincipal;
 import com.chethu.paymentledgerservice.service.BeneficiaryService;
 
 import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 @RestController
 @RequestMapping("/beneficiaries")
+@Tag(name = "Beneficiaries", description = "Authenticated beneficiary management")
+@SecurityRequirement(name = "bearerAuth")
 public class BeneficiaryController {
     private final BeneficiaryService beneficiaryService;
 
@@ -33,12 +38,14 @@ public class BeneficiaryController {
     }
 
     @GetMapping
+    @Operation(summary = "List my beneficiaries")
     public ResponseEntity<List<BeneficiaryResponse>> findAll(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
         return ResponseEntity.ok(beneficiaryService.findForCurrentUser(requirePrincipal(principal).userId()));
     }
 
     @PostMapping
+    @Operation(summary = "Create a beneficiary")
     public ResponseEntity<BeneficiaryResponse> create(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @Valid @RequestBody CreateBeneficiaryRequest request) {
@@ -48,6 +55,7 @@ public class BeneficiaryController {
     }
 
     @PatchMapping("/{id}")
+    @Operation(summary = "Update my beneficiary")
     public ResponseEntity<BeneficiaryResponse> update(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @PathVariable Long id,
@@ -58,6 +66,7 @@ public class BeneficiaryController {
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Delete my beneficiary")
     public ResponseEntity<Void> delete(
             @AuthenticationPrincipal AuthenticatedUserPrincipal principal,
             @PathVariable Long id) {
