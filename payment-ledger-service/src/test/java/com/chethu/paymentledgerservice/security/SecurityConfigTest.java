@@ -4,6 +4,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -82,6 +83,56 @@ class SecurityConfigTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("UNAUTHORIZED")));
     }
 
+    @Test
+    void adminEndpoint_shouldReturnUnauthorizedWithoutToken() throws Exception {
+        mockMvc.perform(get("/api/admin/test"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("UNAUTHORIZED")));
+    }
+
+    @Test
+    void adminEndpoint_shouldReturnUnauthorizedForInvalidToken() throws Exception {
+        mockMvc.perform(get("/api/admin/test").header("Authorization", "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("UNAUTHORIZED")));
+    }
+
+    @Test
+    void adminEndpoint_shouldReturnForbiddenForUserRole() throws Exception {
+        UserEntity user = user(33L, "user@example.com", UserRole.USER, UserStatus.ACTIVE);
+        when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
+        String token = jwtService.generateAccessToken(user);
+
+        mockMvc.perform(get("/api/admin/test").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("FORBIDDEN")));
+    }
+
+    @Test
+    void adminEndpoint_shouldAllowAdminRole() throws Exception {
+        UserEntity admin = user(34L, "admin@example.com", UserRole.ADMIN, UserStatus.ACTIVE);
+        when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(admin));
+        String token = jwtService.generateAccessToken(admin);
+
+        mockMvc.perform(get("/api/admin/test").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("admin ok")));
+    }
+
+    @Test
+    void publicAuthEndpoint_shouldRemainPublic() throws Exception {
+        mockMvc.perform(post("/auth/login"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("public auth ok")));
+    }
+
+    @Test
+    void publicTopUpWebhook_shouldRemainPublic() throws Exception {
+        mockMvc.perform(post("/topups/webhook"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("public webhook ok")));
+    }
+
     private UserEntity user(Long id, String email, UserRole role, UserStatus status) {
         UserEntity user = new UserEntity(email, "hash", "Nguyen Van A", role, status);
         try {
@@ -133,6 +184,21 @@ class SecurityConfigTest {
         @GetMapping("/protected")
         Map<String, String> protectedEndpoint() {
             return Map.of("message", "protected ok");
+        }
+
+        @GetMapping("/api/admin/test")
+        Map<String, String> adminEndpoint() {
+            return Map.of("message", "admin ok");
+        }
+
+        @org.springframework.web.bind.annotation.PostMapping("/auth/login")
+        Map<String, String> publicAuthEndpoint() {
+            return Map.of("message", "public auth ok");
+        }
+
+        @org.springframework.web.bind.annotation.PostMapping("/topups/webhook")
+        Map<String, String> publicWebhookEndpoint() {
+            return Map.of("message", "public webhook ok");
         }
     }
 }
