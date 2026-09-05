@@ -23,7 +23,7 @@ export interface TopUpResponse {
   merchantOrderCode: number;
   amount: number | string;
   currency: string;
-  status: 'PENDING';
+  status: 'PENDING' | 'SUCCESS' | 'CANCELLED';
   provider: 'PAYOS';
   checkoutUrl: string;
   createdAt: string;

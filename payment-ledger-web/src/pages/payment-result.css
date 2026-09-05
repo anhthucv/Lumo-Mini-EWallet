@@ -1,0 +1,35 @@
+.payment-result-shell {
+  min-height: 100vh;
+  padding: 28px clamp(20px, 5vw, 72px);
+  color: #25231e;
+  background:
+    radial-gradient(circle at 12% 12%, rgba(248, 211, 67, .22), transparent 25%),
+    linear-gradient(145deg, #fff8e9 0%, #f5f1e7 58%, #e8f5ed 100%);
+}
+
+.payment-result-header { max-width: 900px; margin: 0 auto; }
+.payment-result-brand { display: inline-flex; align-items: center; gap: 10px; font-size: 1.3rem; letter-spacing: -.04em; }
+.payment-result-brand img { width: 36px; height: 36px; }
+.payment-result-card {
+  width: min(100%, 480px);
+  margin: clamp(70px, 13vh, 150px) auto 0;
+  padding: 48px 38px 40px;
+  text-align: center;
+  background: rgba(255, 253, 248, .9);
+  border: 1px solid rgba(74, 67, 51, .12);
+  border-radius: 28px;
+  box-shadow: 0 24px 70px rgba(83, 70, 39, .13);
+}
+.payment-result-icon { display: grid; place-items: center; width: 68px; height: 68px; margin: 0 auto 22px; border-radius: 50%; font-size: 2rem; font-weight: 800; background: #f7d543; }
+.payment-result-success .payment-result-icon { color: #12614f; background: #ccefe0; }
+.payment-result-cancelled .payment-result-icon { color: #8d493f; background: #f7ddd3; }
+.payment-result-pending .payment-result-icon, .payment-result-checking .payment-result-icon { color: #815d16; background: #fbe9ae; }
+.payment-result-error .payment-result-icon { color: #8d493f; background: #f7ddd3; }
+.payment-result-kicker { margin: 0 0 8px; color: #8a806f; font-size: .75rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.payment-result-card h1 { margin: 0; font-size: clamp(1.75rem, 4vw, 2.35rem); letter-spacing: -.06em; }
+.payment-result-description { max-width: 330px; margin: 14px auto 0; color: #6f695c; line-height: 1.65; }
+.payment-result-actions { display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; margin-top: 32px; }
+.payment-result-button { display: inline-flex; justify-content: center; min-width: 140px; padding: 12px 20px; border: 0; border-radius: 999px; color: #25231e; background: #f7d543; font-weight: 800; text-decoration: none; }
+.payment-result-button:hover, .payment-result-button:focus-visible { background: #eac62b; }
+.payment-result-link { color: #6f695c; font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
+@media (max-width: 520px) { .payment-result-card { padding: 38px 22px 32px; } }

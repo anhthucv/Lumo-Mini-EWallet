@@ -6,6 +6,7 @@ import { createBeneficiary, deleteBeneficiary, getBeneficiaries, updateBeneficia
 import NotificationBell from '../components/NotificationBell';
 import { getOrCreateIdempotencyAttempt, type IdempotencyAttempt } from '../api/idempotency';
 import { createTopUp } from '../api/topUpApi';
+import { savePendingTopUp } from '../api/pendingTopUp';
 import {
   getMyWallet,
   getRecipient,
@@ -383,6 +384,7 @@ export default function WalletPage() {
         return;
       }
       topUpAttempt.current = null;
+      savePendingTopUp({ topUpId: response.id, merchantOrderCode: response.merchantOrderCode });
       window.location.assign(response.checkoutUrl);
     } catch (requestError) {
       if (requestError instanceof ApiError) {

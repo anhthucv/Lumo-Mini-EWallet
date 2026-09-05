@@ -9,3 +9,17 @@ export function createTopUp(amount: number, idempotencyKey: string, signal?: Abo
     signal,
   });
 }
+
+export function getTopUp(id: number, signal?: AbortSignal): Promise<TopUpResponse> {
+  return requestJson<TopUpResponse>(`/topups/${id}`, {
+    method: 'GET',
+    signal,
+  });
+}
+
+export function syncTopUp(id: number, signal?: AbortSignal): Promise<TopUpResponse> {
+  return requestJson<TopUpResponse>(`/topups/${id}/sync`, {
+    method: 'POST',
+    signal,
+  });
+}
