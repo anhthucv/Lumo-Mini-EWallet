@@ -41,6 +41,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/topups': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      },
       '/transactions': {
         target: 'http://localhost:8080',
         changeOrigin: true,

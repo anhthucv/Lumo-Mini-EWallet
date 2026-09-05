@@ -5,8 +5,8 @@ import { ApiError } from '../api/http';
 import { createBeneficiary, deleteBeneficiary, getBeneficiaries, updateBeneficiary } from '../api/beneficiaryApi';
 import NotificationBell from '../components/NotificationBell';
 import { getOrCreateIdempotencyAttempt, type IdempotencyAttempt } from '../api/idempotency';
+import { createTopUp } from '../api/topUpApi';
 import {
-  deposit,
   getMyWallet,
   getRecipient,
   getTransactions,
@@ -30,7 +30,7 @@ import './register.css';
 import './wallet.css';
 import './dashboard.css';
 
-type WalletOperation = 'transfer' | 'deposit' | 'withdraw';
+type WalletOperation = 'transfer' | 'topup' | 'withdraw';
 
 const vndFormatter = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -75,26 +75,20 @@ function getErrorMessage(error: unknown): string {
   return 'The server could not be reached. Check your connection and try again.';
 }
 
-function getDepositErrorMessage(error: unknown): string {
-  if (error instanceof ApiError && error.code === 'RISK_REJECTED') {
-    return 'This deposit was rejected by transaction risk controls.';
+function getTopUpErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.status === 401) {
+    return 'Your session has expired. Please sign in again.';
   }
-  if (error instanceof ApiError && error.code === 'PER_TRANSACTION_LIMIT_EXCEEDED') {
-    return 'This deposit exceeds the per-transaction limit.';
-  }
-  if (error instanceof ApiError && error.code === 'DAILY_TRANSACTION_LIMIT_EXCEEDED') {
-    return 'This deposit exceeds the remaining daily limit.';
+  if (error instanceof ApiError && error.status === 409) {
+    return 'This payment attempt conflicts with an earlier request. Please start again with a new amount.';
   }
   if (error instanceof ApiError && error.status === 400) {
-    return error.message || 'Enter a valid deposit amount of at least 1,000 ₫.';
-  }
-  if (error instanceof ApiError && error.status === 404) {
-    return 'Your wallet could not be found. Please try again later.';
+    return error.message || 'Enter a valid top-up amount of at least 1,000 ₫.';
   }
   if (error instanceof ApiError) {
-    return 'The deposit could not be completed. Please try again.';
+    return 'Payment checkout could not be created. Please try again.';
   }
-  return 'The server could not be reached. Please check your connection and try again.';
+  return 'The connection was interrupted. Try again to continue this payment.';
 }
 
 function getWithdrawErrorMessage(error: unknown): string {
@@ -175,6 +169,24 @@ function getLimitValidationMessage(amount: number, limit: TransactionLimit, oper
   return null;
 }
 
+function formatAmountInput(value: string): string {
+  const digits = value.replace(/\D/g, '');
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function parseAmountInput(value: string): number {
+  return Number(value.replace(/,/g, ''));
+}
+
+function isSafeCheckoutUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 export default function WalletPage() {
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -186,7 +198,6 @@ export default function WalletPage() {
   const [retryKey, setRetryKey] = useState(0);
   const [amount, setAmount] = useState('');
   const [depositError, setDepositError] = useState<string | null>(null);
-  const [depositSuccess, setDepositSuccess] = useState<string | null>(null);
   const [depositing, setDepositing] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawError, setWithdrawError] = useState<string | null>(null);
@@ -224,9 +235,9 @@ export default function WalletPage() {
   const [deletingRecipientId, setDeletingRecipientId] = useState<number | null>(null);
   const [confirmDeleteRecipientId, setConfirmDeleteRecipientId] = useState<number | null>(null);
   const [manageRecipientError, setManageRecipientError] = useState<string | null>(null);
-  const depositAttempt = useRef<IdempotencyAttempt | null>(null);
   const withdrawAttempt = useRef<IdempotencyAttempt | null>(null);
   const transferAttempt = useRef<IdempotencyAttempt | null>(null);
+  const topUpAttempt = useRef<IdempotencyAttempt | null>(null);
   const recipientInputRef = useRef<HTMLInputElement>(null);
 
   async function refreshLimits() {
@@ -351,52 +362,38 @@ export default function WalletPage() {
     return () => controller.abort();
   }, [historyRefreshKey, logout, navigate]);
 
-  async function handleDeposit(event: FormEvent<HTMLFormElement>) {
+  async function handleTopUp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setDepositError(null);
-    setDepositSuccess(null);
 
-    const numericAmount = Number(amount);
-    if (!amount.trim() || !Number.isFinite(numericAmount) || numericAmount <= 0) {
-      setDepositError('Enter a valid amount greater than zero.');
+    const numericAmount = parseAmountInput(amount);
+    if (!amount.trim() || !Number.isSafeInteger(numericAmount) || numericAmount < 1000) {
+      setDepositError('Minimum top-up is 1,000 ₫. Enter a whole VND amount.');
       return;
     }
-    if (numericAmount < 1000) {
-      setDepositError('The minimum deposit is 1,000 ₫.');
-      return;
-    }
-    if (limits) {
-      const limitError = getLimitValidationMessage(numericAmount, limits.deposit, 'deposit');
-      if (limitError) {
-        setDepositError(limitError);
-        return;
-      }
-    }
 
-    const attempt = getOrCreateIdempotencyAttempt(depositAttempt.current, String(numericAmount));
-    depositAttempt.current = attempt;
+    const attempt = getOrCreateIdempotencyAttempt(topUpAttempt.current, String(numericAmount));
+    topUpAttempt.current = attempt;
     setDepositing(true);
     try {
-      const response = await deposit(numericAmount, attempt.key);
-      setWallet((currentWallet) => currentWallet && toWalletResponse(currentWallet, response));
-      setAmount('');
-      depositAttempt.current = null;
-      setDepositSuccess(
-        `Deposited ${formatBalance(numericAmount)}. Updated balance: ${formatBalance(response.balance)}.`,
-      );
-      setHistoryRefreshKey((key) => key + 1);
-      void refreshLimits();
-    } catch (requestError) {
-      if (requestError instanceof ApiError && requestError.status === 401) {
-        depositAttempt.current = null;
-        logout();
-        navigate('/login', { replace: true });
+      const response = await createTopUp(numericAmount, attempt.key);
+      if (!response?.checkoutUrl || !isSafeCheckoutUrl(response.checkoutUrl)) {
+        topUpAttempt.current = null;
+        setDepositError('Payment checkout could not be created. Please try again.');
         return;
       }
+      topUpAttempt.current = null;
+      window.location.assign(response.checkoutUrl);
+    } catch (requestError) {
       if (requestError instanceof ApiError) {
-        depositAttempt.current = null;
+        topUpAttempt.current = null;
+        if (requestError.status === 401) {
+          logout();
+          navigate('/login', { replace: true });
+          return;
+        }
       }
-      setDepositError(getDepositErrorMessage(requestError));
+      setDepositError(getTopUpErrorMessage(requestError));
     } finally {
       setDepositing(false);
     }
@@ -746,43 +743,45 @@ export default function WalletPage() {
             <section className="wallet-operation" aria-label="Wallet operations">
               <div className="wallet-operation-switcher" role="tablist" aria-label="Choose wallet operation">
                 <button type="button" role="tab" aria-selected={activeOperation === 'transfer'} className={activeOperation === 'transfer' ? 'active transfer-tab' : 'transfer-tab'} onClick={() => setActiveOperation('transfer')}>Send</button>
-                <button type="button" role="tab" aria-selected={activeOperation === 'deposit'} className={activeOperation === 'deposit' ? 'active deposit-tab' : 'deposit-tab'} onClick={() => setActiveOperation('deposit')}>Add money</button>
+                <button type="button" role="tab" aria-selected={activeOperation === 'topup'} className={activeOperation === 'topup' ? 'active deposit-tab' : 'deposit-tab'} onClick={() => setActiveOperation('topup')}>Add money</button>
                 <button type="button" role="tab" aria-selected={activeOperation === 'withdraw'} className={activeOperation === 'withdraw' ? 'active withdraw-tab' : 'withdraw-tab'} onClick={() => setActiveOperation('withdraw')}>Withdraw</button>
               </div>
-              {activeOperation === 'deposit' && <form className="deposit-panel" onSubmit={handleDeposit} noValidate>
+              {activeOperation === 'topup' && <form className="deposit-panel topup-panel" onSubmit={handleTopUp} noValidate>
               <div className="deposit-heading">
                 <div>
                   <span className="deposit-kicker">Add funds</span>
-                  <h2>Deposit to this wallet</h2>
+                  <h2>Add money to your wallet</h2>
                 </div>
                 <span className="deposit-minimum">Minimum 1,000 ₫</span>
               </div>
-              {limits && <div className="limit-summary">
-                <span>Per-transaction limit: {formatBalance(limits.deposit.perTransactionLimit)}</span>
-                <span>Remaining today: {formatBalance(limits.deposit.remainingToday)}</span>
-              </div>}
-              <label className="field-group" htmlFor="deposit-amount">
+              <p className="topup-description">You'll complete payment securely through payOS.</p>
+              <div className="topup-quick-amounts" aria-label="Quick top-up amounts">
+                {[50000, 100000, 200000, 500000].map((quickAmount) => (
+                  <button key={quickAmount} type="button" onClick={() => { topUpAttempt.current = null; setAmount(formatAmountInput(String(quickAmount))); }} disabled={depositing}>
+                    {formatBalance(quickAmount)}
+                  </button>
+                ))}
+              </div>
+              <label className="field-group" htmlFor="topup-amount">
                 <span className="field-label">Amount in VND</span>
                 <input
-                  id="deposit-amount"
+                  id="topup-amount"
                   className="input"
-                  type="number"
-                  inputMode="decimal"
+                  type="text"
+                  inputMode="numeric"
                   min="1000"
-                  step="1"
                   value={amount}
                   onChange={(event) => {
-                    depositAttempt.current = null;
-                    setAmount(event.target.value);
+                    topUpAttempt.current = null;
+                    setAmount(formatAmountInput(event.target.value));
                   }}
                   placeholder="100,000"
                   disabled={depositing}
                 />
               </label>
               {depositError && <div className="banner error" role="alert">{depositError}</div>}
-              {depositSuccess && <div className="banner success" role="status">{depositSuccess}</div>}
-              <button type="submit" className="primary-button deposit-button" disabled={depositing}>
-                {depositing ? 'Processing deposit...' : 'Deposit funds'}
+              <button type="submit" className="primary-button deposit-button" disabled={depositing} aria-busy={depositing}>
+                {depositing ? 'Preparing payment...' : 'Continue to payment'}
               </button>
               </form>}
             {activeOperation === 'withdraw' && <form className="deposit-panel withdraw-panel" onSubmit={handleWithdraw} noValidate>

@@ -18,6 +18,17 @@ export interface DepositResponse {
   status: string;
 }
 
+export interface TopUpResponse {
+  id: number;
+  merchantOrderCode: number;
+  amount: number | string;
+  currency: string;
+  status: 'PENDING';
+  provider: 'PAYOS';
+  checkoutUrl: string;
+  createdAt: string;
+}
+
 export interface RecipientResponse {
   accountNumber: string;
   ownerName: string;

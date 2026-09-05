@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Lumo icon</title>
+  <desc id="desc">Lumo's yellow circular coin mark with a charcoal notch.</desc>
+  <g transform="rotate(-10 256 256)">
+    <circle cx="256" cy="256" r="138" fill="#facc15"/>
+    <path d="M311 210h74v55c0 0-21 0-37 0-20 0-37-12-37-30z" fill="#24211d"/>
+  </g>
+</svg>

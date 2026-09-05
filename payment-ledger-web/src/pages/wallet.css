@@ -676,6 +676,39 @@
   color: #81796d;
 }
 
+.topup-description {
+  margin: -4px 0 0;
+  color: #81796d;
+  font-size: 0.9rem;
+}
+
+.topup-quick-amounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topup-quick-amounts button {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid #eadca8;
+  border-radius: 999px;
+  background: #fff8dc;
+  color: #6d5000;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.topup-quick-amounts button:hover:not(:disabled),
+.topup-quick-amounts button:focus-visible {
+  background: #fff1a8;
+  border-color: #e7b900;
+}
+
+.topup-panel .deposit-button {
+  width: 100%;
+}
+
 .wallet-operation .limit-summary {
   padding: 10px 12px;
   border-radius: 10px;

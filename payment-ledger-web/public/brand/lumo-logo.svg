@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 120" role="img" aria-labelledby="title desc">
+  <title id="title">Lumo</title>
+  <desc id="desc">Lumo's yellow circular coin mark and wordmark.</desc>
+  <g transform="translate(-20 -10) scale(.275)">
+    <g transform="rotate(-10 256 256)">
+      <circle cx="256" cy="256" r="138" fill="#facc15"/>
+      <path d="M311 210h74v55c0 0-21 0-37 0-20 0-37-12-37-30z" fill="#24211d"/>
+    </g>
+  </g>
+  <text x="99" y="78" fill="#24211d" font-family="DM Sans, Avenir Next, Segoe UI, sans-serif" font-size="46" font-weight="700" letter-spacing="-1.4">Lumo</text>
+</svg>
