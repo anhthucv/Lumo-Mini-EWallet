@@ -1,0 +1,36 @@
+.admin-users-shell .dashboard-container { max-width: 1240px; }
+.admin-users-heading { margin: 52px 0 28px; }
+.admin-users-heading h1 { margin: 7px 0; color: #24211d; font-size: clamp(2rem, 4vw, 3.2rem); letter-spacing: -.05em; }
+.admin-users-heading p { margin: 0; color: #81796d; }
+.admin-users-surface { padding: clamp(20px, 3vw, 32px); border: 1px solid #ebe4d8; border-radius: 20px; background: #fff; box-shadow: 0 12px 32px rgba(72, 54, 28, .045); }
+.admin-users-search { display: grid; gap: 8px; margin-bottom: 20px; color: #6f675b; font-size: .78rem; font-weight: 700; }
+.admin-users-search > div { display: flex; gap: 10px; }
+.admin-users-search input, .admin-modal textarea { width: 100%; border: 1px solid #e8e1d4; border-radius: 11px; background: #fffdfa; color: #24211d; font: inherit; outline: none; padding: 12px 14px; }
+.admin-users-search input:focus, .admin-modal textarea:focus { border-color: #e7b900; box-shadow: 0 0 0 4px rgba(250, 204, 21, .15); }
+.admin-users-search .primary-button, .admin-modal .primary-button { border: 0; border-radius: 11px; background: #facc15; color: #24211d; padding: 0 18px; font: inherit; font-weight: 700; }
+.admin-users-table-wrap { overflow-x: auto; }
+.admin-users-table-wrap table { width: 100%; min-width: 760px; border-collapse: collapse; text-align: left; }
+.admin-users-table-wrap th { padding: 12px; color: #8f877b; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }
+.admin-users-table-wrap td { padding: 16px 12px; border-top: 1px solid #f0eadf; color: #4f493f; font-size: .86rem; vertical-align: middle; }
+.admin-users-table-wrap td strong, .admin-users-table-wrap td small { display: block; }
+.admin-users-table-wrap td strong { color: #24211d; }
+.admin-users-table-wrap td small { margin-top: 4px; color: #8f877b; }
+.admin-status { display: inline-block; border-radius: 99px; padding: 5px 9px; background: #eef8f2; color: #14776c; font-size: .72rem; font-weight: 700; }
+.admin-status.locked { background: #fff1ec; color: #a04432; }
+.admin-status-button, .admin-profile-link { border: 1px solid #eadca8; border-radius: 9px; background: #fff8dc; color: #6d5000; cursor: pointer; padding: 8px 11px; font: inherit; font-size: .78rem; font-weight: 700; text-decoration: none; }
+.admin-users-state { display: grid; min-height: 180px; place-items: center; gap: 12px; padding: 24px; color: #81796d; text-align: center; }
+.admin-users-error { color: #a04432; }
+.admin-users-success { margin: 0 0 16px; color: #14776c; font-size: .86rem; font-weight: 700; }
+.admin-users-pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 22px; color: #6f675b; font-size: .84rem; }
+.admin-users-pagination .secondary-button, .admin-modal .secondary-button { border: 1px solid #e8e1d4; border-radius: 10px; background: #fff; color: #4f493f; padding: 9px 13px; font: inherit; }
+.admin-users-pagination button:disabled { cursor: not-allowed; opacity: .45; }
+.admin-modal-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: rgba(36, 33, 29, .42); }
+.admin-modal { width: min(100%, 440px); padding: 26px; border-radius: 18px; background: #fffdf9; box-shadow: 0 24px 70px rgba(36, 33, 29, .22); }
+.admin-modal h2 { margin: 0; color: #24211d; }
+.admin-modal p { margin: 6px 0 20px; color: #81796d; overflow-wrap: anywhere; }
+.admin-modal form { display: grid; gap: 8px; color: #6f675b; font-size: .8rem; font-weight: 700; }
+.admin-modal textarea { min-height: 120px; resize: vertical; }
+.admin-modal-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 10px; }
+.admin-modal .primary-button, .admin-modal .secondary-button { min-height: 42px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@media (max-width: 760px) { .admin-users-heading { margin-top: 32px; } .admin-users-search > div { display: grid; } .admin-users-search .primary-button { min-height: 44px; } }

@@ -39,6 +39,12 @@ public class UserEntity {
     @Column(name = "status", nullable = false, length = 50)
     private UserStatus status;
 
+    @Column(name = "status_reason", length = 255)
+    private String statusReason;
+
+    @Column(name = "status_changed_at")
+    private LocalDateTime statusChangedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -88,6 +94,22 @@ public class UserEntity {
 
     public UserStatus getStatus() {
         return status;
+    }
+
+    public String getStatusReason() { return statusReason; }
+
+    public LocalDateTime getStatusChangedAt() { return statusChangedAt; }
+
+    public void lock(String reason) {
+        this.status = UserStatus.LOCKED;
+        this.statusReason = reason;
+        this.statusChangedAt = LocalDateTime.now();
+    }
+
+    public void unlock(String reason) {
+        this.status = UserStatus.ACTIVE;
+        this.statusReason = reason;
+        this.statusChangedAt = LocalDateTime.now();
     }
 
     public LocalDateTime getCreatedAt() {

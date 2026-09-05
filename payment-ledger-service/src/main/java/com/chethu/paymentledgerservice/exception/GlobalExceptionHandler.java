@@ -233,6 +233,12 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.LOCKED, "USER_LOCKED", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(AdminUserOperationForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleAdminUserOperationForbidden(
+            AdminUserOperationForbiddenException ex, HttpServletRequest request) {
+        return error(HttpStatus.FORBIDDEN, "ADMIN_USER_OPERATION_FORBIDDEN", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception ex, HttpServletRequest request) {
         log.error("Unexpected {} while processing {}", ex.getClass().getSimpleName(), request.getRequestURI());

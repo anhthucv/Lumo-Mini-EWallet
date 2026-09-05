@@ -130,6 +130,7 @@ export default function DashboardPage() {
             <Link className="active" to="/dashboard">Home</Link>
             <Link to="/wallet">Wallet</Link>
             <Link to="/activity">Activity</Link>
+            {user?.role === 'ADMIN' && <Link to="/admin/users">Admin users</Link>}
           </nav>
           <div className="dashboard-header-actions">
             <NotificationBell />
