@@ -10,11 +10,14 @@ import com.chethu.paymentledgerservice.payment.provider.PaymentCheckoutResult;
 import com.chethu.paymentledgerservice.payment.provider.PaymentProvider;
 import com.chethu.paymentledgerservice.payment.provider.PaymentProviderException;
 import com.chethu.paymentledgerservice.payment.provider.PaymentProviderType;
+import com.chethu.paymentledgerservice.payment.provider.VerifiedPaymentWebhook;
+import com.chethu.paymentledgerservice.exception.InvalidPaymentWebhookException;
 
 import vn.payos.PayOS;
 import vn.payos.exception.PayOSException;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkRequest;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
+import vn.payos.model.webhooks.WebhookData;
 
 @Component
 public class PayOsPaymentProviderAdapter implements PaymentProvider {
@@ -54,6 +57,32 @@ public class PayOsPaymentProviderAdapter implements PaymentProvider {
 
     protected CreatePaymentLinkResponse createPaymentLink(PayOS client, CreatePaymentLinkRequest request) {
         return client.paymentRequests().create(request);
+    }
+
+    @Override
+    public VerifiedPaymentWebhook verifyWebhook(String rawPayload) {
+        if (rawPayload == null || rawPayload.isBlank()) {
+            throw new InvalidPaymentWebhookException();
+        }
+        try {
+            WebhookData data = createPayOsClient().webhooks().verify(rawPayload);
+            if (data == null) {
+                throw new InvalidPaymentWebhookException();
+            }
+            return new VerifiedPaymentWebhook(
+                    PaymentProviderType.PAYOS,
+                    data.getOrderCode(),
+                    data.getAmount() == null ? null : BigDecimal.valueOf(data.getAmount()),
+                    data.getCurrency(),
+                    data.getPaymentLinkId(),
+                    data.getReference(),
+                    data.getCode(),
+                    "00".equals(data.getCode()));
+        } catch (InvalidPaymentWebhookException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw new InvalidPaymentWebhookException();
+        }
     }
 
     private CreatePaymentLinkRequest toCreatePaymentLinkRequest(PaymentCheckoutRequest request) {

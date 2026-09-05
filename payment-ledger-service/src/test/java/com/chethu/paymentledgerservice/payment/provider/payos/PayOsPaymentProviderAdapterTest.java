@@ -18,6 +18,7 @@ import com.chethu.paymentledgerservice.payment.provider.PaymentCheckoutResult;
 import com.chethu.paymentledgerservice.payment.provider.PaymentProvider;
 import com.chethu.paymentledgerservice.payment.provider.PaymentProviderException;
 import com.chethu.paymentledgerservice.payment.provider.PaymentProviderType;
+import com.chethu.paymentledgerservice.exception.InvalidPaymentWebhookException;
 
 import vn.payos.PayOS;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkRequest;
@@ -95,6 +96,16 @@ class PayOsPaymentProviderAdapterTest {
 
         assertThrows(PaymentProviderException.class, () -> adapter.createCheckout(new PaymentCheckoutRequest(
                 0L, new BigDecimal("100000"), "VND", "Top up wallet")));
+    }
+
+    @Test
+    void invalidWebhookSignatureIsRejectedBySdkBoundary() {
+        PayOsPaymentProviderAdapter adapter = new PayOsPaymentProviderAdapter(properties());
+
+        assertThrows(InvalidPaymentWebhookException.class, () -> adapter.verifyWebhook(
+                "{\"code\":\"00\",\"desc\":\"success\",\"success\":true,"
+                        + "\"data\":{\"orderCode\":77,\"amount\":10000,\"currency\":\"VND\","
+                        + "\"paymentLinkId\":\"payment-link\"},\"signature\":\"invalid\"}"));
     }
 
     @Test

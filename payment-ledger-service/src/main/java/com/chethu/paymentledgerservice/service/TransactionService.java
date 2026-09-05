@@ -55,6 +55,11 @@ public class TransactionService {
 
     public void recordTransaction(AccountEntity account, AccountEntity relatedAccount, TransactionType transactionType,
             BigDecimal amount, BigDecimal balance, JournalEntity journal) {
+        recordTransactionEntity(account, relatedAccount, transactionType, amount, balance, journal);
+    }
+
+    public TransactionEntity recordTransactionEntity(AccountEntity account, AccountEntity relatedAccount,
+            TransactionType transactionType, BigDecimal amount, BigDecimal balance, JournalEntity journal) {
         TransactionEntity transaction = new TransactionEntity (account,relatedAccount, transactionType, amount,balance);
         if (journal != null) {
             transaction.associateJournal(journal);
@@ -63,6 +68,7 @@ public class TransactionService {
         log.info("Transaction recorded: accountId={}, type={}, amount={}",
             account.getId(), transactionType, amount
         );
+        return transaction;
     }
 
     public Page<TransactionResponse> getHistoryForUser(Long userId, TransactionType type,

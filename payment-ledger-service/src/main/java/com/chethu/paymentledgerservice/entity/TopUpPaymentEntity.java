@@ -21,6 +21,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.OneToOne;
 
 @Entity
 @Table(name = "top_up_payments", uniqueConstraints = {
@@ -67,6 +68,17 @@ public class TopUpPaymentEntity {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "transaction_id", unique = true)
+    private TransactionEntity transaction;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "journal_id", unique = true)
+    private JournalEntity journal;
+
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
     protected TopUpPaymentEntity() {
     }
 
@@ -106,6 +118,16 @@ public class TopUpPaymentEntity {
         checkoutUrl = checkout.checkoutUrl();
     }
 
+    public void markSuccessful(TransactionEntity transaction, JournalEntity journal) {
+        if (status != TopUpPaymentStatus.PENDING || transaction == null || journal == null) {
+            throw new IllegalStateException("Top-up payment cannot be finalized");
+        }
+        this.status = TopUpPaymentStatus.SUCCESS;
+        this.transaction = transaction;
+        this.journal = journal;
+        this.completedAt = LocalDateTime.now();
+    }
+
     public Long getId() { return id; }
     public AccountEntity getAccount() { return account; }
     public BigDecimal getAmount() { return amount; }
@@ -118,4 +140,7 @@ public class TopUpPaymentEntity {
     public String getIdempotencyKey() { return idempotencyKey; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public TransactionEntity getTransaction() { return transaction; }
+    public JournalEntity getJournal() { return journal; }
+    public LocalDateTime getCompletedAt() { return completedAt; }
 }

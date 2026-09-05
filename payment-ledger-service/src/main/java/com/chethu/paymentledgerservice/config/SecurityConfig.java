@@ -32,6 +32,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/auth/register/send-code", "/auth/register", "/auth/login")
                         .permitAll()
+                        .requestMatchers(HttpMethod.POST, "/topups/webhook")
+                        .permitAll()
                         .requestMatchers("/health", "/hello", "/project-info").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

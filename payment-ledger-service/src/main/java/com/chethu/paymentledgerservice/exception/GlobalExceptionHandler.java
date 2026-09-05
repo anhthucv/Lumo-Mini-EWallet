@@ -186,6 +186,12 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.BAD_GATEWAY, "PAYMENT_PROVIDER_ERROR", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(InvalidPaymentWebhookException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidPaymentWebhook(InvalidPaymentWebhookException ex,
+            HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_PAYMENT_WEBHOOK", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(VerificationCodeNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleVerificationCodeNotFound(VerificationCodeNotFoundException ex,
             HttpServletRequest request) {

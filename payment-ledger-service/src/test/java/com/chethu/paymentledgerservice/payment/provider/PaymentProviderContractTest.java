@@ -15,6 +15,7 @@ class PaymentProviderContractTest {
     void genericProviderTypesDoNotDependOnPayOsSdkClasses() {
         assertTrue(allTypesAreProviderNeutral(PaymentCheckoutRequest.class.getRecordComponents()));
         assertTrue(allTypesAreProviderNeutral(PaymentCheckoutResult.class.getRecordComponents()));
+        assertTrue(allTypesAreProviderNeutral(VerifiedPaymentWebhook.class.getRecordComponents()));
         assertTrue(Arrays.stream(PaymentProvider.class.getDeclaredMethods())
                 .flatMap(method -> Arrays.stream(method.getParameterTypes()))
                 .map(Class::getName)

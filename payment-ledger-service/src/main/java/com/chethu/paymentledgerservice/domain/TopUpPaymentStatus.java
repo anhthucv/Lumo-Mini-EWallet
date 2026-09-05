@@ -1,5 +1,6 @@
 package com.chethu.paymentledgerservice.domain;
 
 public enum TopUpPaymentStatus {
-    PENDING
+    PENDING,
+    SUCCESS
 }
