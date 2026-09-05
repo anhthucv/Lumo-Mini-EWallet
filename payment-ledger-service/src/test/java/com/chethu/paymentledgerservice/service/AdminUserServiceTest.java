@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
 
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
@@ -21,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 
 import com.chethu.paymentledgerservice.domain.UserRole;
 import com.chethu.paymentledgerservice.domain.UserStatus;
+import com.chethu.paymentledgerservice.domain.AuditAction;
 import com.chethu.paymentledgerservice.dto.AdminUserResponse;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.entity.UserEntity;
@@ -34,7 +36,8 @@ class AdminUserServiceTest {
     void listUsers_shouldUseDatabasePageAndReturnOnlySafeMaskedFields() {
         UserRepository users = Mockito.mock(UserRepository.class);
         AccountRepository accounts = Mockito.mock(AccountRepository.class);
-        AdminUserService service = new AdminUserService(users, accounts);
+        AuditLogService audit = Mockito.mock(AuditLogService.class);
+        AdminUserService service = new AdminUserService(users, accounts, audit);
         UserEntity user = user(7L, UserRole.USER, UserStatus.ACTIVE);
         AccountEntity account = new AccountEntity("1234567890", "Owner");
         setField(account, "id", 8L);
@@ -56,7 +59,7 @@ class AdminUserServiceTest {
     void listUsers_shouldDelegateCaseInsensitiveSearchToRepository() {
         UserRepository users = Mockito.mock(UserRepository.class);
         AccountRepository accounts = Mockito.mock(AccountRepository.class);
-        AdminUserService service = new AdminUserService(users, accounts);
+        AdminUserService service = new AdminUserService(users, accounts, Mockito.mock(AuditLogService.class));
         when(users.findByEmailContainingIgnoreCaseOrFullNameContainingIgnoreCase(any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of()));
 
@@ -72,7 +75,8 @@ class AdminUserServiceTest {
     void lockUser_shouldPersistLockedStatusAndTrimReason() {
         UserRepository users = Mockito.mock(UserRepository.class);
         AccountRepository accounts = Mockito.mock(AccountRepository.class);
-        AdminUserService service = new AdminUserService(users, accounts);
+        AuditLogService audit = Mockito.mock(AuditLogService.class);
+        AdminUserService service = new AdminUserService(users, accounts, audit);
         UserEntity target = user(7L, UserRole.USER, UserStatus.ACTIVE);
         when(users.findById(7L)).thenReturn(Optional.of(target));
         when(users.save(target)).thenReturn(target);
@@ -84,13 +88,15 @@ class AdminUserServiceTest {
         assertEquals("policy violation", target.getStatusReason());
         assertEquals(UserStatus.LOCKED, response.status());
         verify(users).save(target);
+        verify(audit, times(1)).recordUserStatusChange(1L, 7L, AuditAction.ADMIN_USER_LOCK,
+                "policy violation", "ACTIVE -> LOCKED");
     }
 
     @Test
     void unlockUser_shouldPersistActiveStatusAndReason() {
         UserRepository users = Mockito.mock(UserRepository.class);
         AccountRepository accounts = Mockito.mock(AccountRepository.class);
-        AdminUserService service = new AdminUserService(users, accounts);
+        AdminUserService service = new AdminUserService(users, accounts, Mockito.mock(AuditLogService.class));
         UserEntity target = user(7L, UserRole.USER, UserStatus.LOCKED);
         when(users.findById(7L)).thenReturn(Optional.of(target));
         when(users.save(target)).thenReturn(target);
@@ -105,7 +111,7 @@ class AdminUserServiceTest {
     @Test
     void statusChange_shouldRejectSelf() {
         UserRepository users = Mockito.mock(UserRepository.class);
-        AdminUserService service = new AdminUserService(users, Mockito.mock(AccountRepository.class));
+        AdminUserService service = new AdminUserService(users, Mockito.mock(AccountRepository.class), Mockito.mock(AuditLogService.class));
         UserEntity target = user(7L, UserRole.ADMIN, UserStatus.ACTIVE);
         when(users.findById(7L)).thenReturn(Optional.of(target));
 
@@ -116,7 +122,7 @@ class AdminUserServiceTest {
     @Test
     void lockUser_shouldRejectAnotherAdmin() {
         UserRepository users = Mockito.mock(UserRepository.class);
-        AdminUserService service = new AdminUserService(users, Mockito.mock(AccountRepository.class));
+        AdminUserService service = new AdminUserService(users, Mockito.mock(AccountRepository.class), Mockito.mock(AuditLogService.class));
         UserEntity target = user(8L, UserRole.ADMIN, UserStatus.ACTIVE);
         when(users.findById(8L)).thenReturn(Optional.of(target));
 
@@ -127,7 +133,7 @@ class AdminUserServiceTest {
     @Test
     void statusChange_shouldRejectUnknownUser() {
         UserRepository users = Mockito.mock(UserRepository.class);
-        AdminUserService service = new AdminUserService(users, Mockito.mock(AccountRepository.class));
+        AdminUserService service = new AdminUserService(users, Mockito.mock(AccountRepository.class), Mockito.mock(AuditLogService.class));
         when(users.findById(99L)).thenReturn(Optional.empty());
 
         assertThrows(UserNotFoundException.class, () -> service.unlockUser(7L, 99L, "reason"));

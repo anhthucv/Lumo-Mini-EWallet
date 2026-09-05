@@ -12,6 +12,9 @@ import NotificationsPage from './pages/NotificationsPage';
 import ActivityPage from './pages/ActivityPage';
 import PaymentResultPage from './pages/PaymentResultPage';
 import AdminUsersPage from './pages/AdminUsersPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminTransactionsPage from './pages/AdminTransactionsPage';
+import AdminAuditLogsPage from './pages/AdminAuditLogsPage';
 
 function RootRedirect() {
   const { isAuthenticated, isHydrating } = useAuth();
@@ -42,6 +45,9 @@ export default function App() {
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/payment-result" element={<PaymentResultPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
+        <Route path="/admin" element={<AdminDashboardPage />} />
+        <Route path="/admin/transactions" element={<AdminTransactionsPage />} />
+        <Route path="/admin/audit-logs" element={<AdminAuditLogsPage />} />
       </Route>
       <Route path="*" element={<RootRedirect />} />
     </Routes>

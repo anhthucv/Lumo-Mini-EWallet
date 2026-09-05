@@ -15,6 +15,12 @@ import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.entity.TransactionEntity;
 
 public interface TransactionRepository extends JpaRepository<TransactionEntity,Long>, JpaSpecificationExecutor<TransactionEntity>{
+    long countByStatus(TransactionStatus status);
+    long countByTransactionTypeAndStatus(TransactionType type, TransactionStatus status);
+
+    @Query("select coalesce(sum(t.amount), 0) from TransactionEntity t where t.transactionType = :type and t.status = :status")
+    BigDecimal sumByTypeAndStatus(@Param("type") TransactionType type, @Param("status") TransactionStatus status);
+
     Optional<TransactionEntity> findByIdAndAccount(Long id, AccountEntity account);
 
     @Query("""

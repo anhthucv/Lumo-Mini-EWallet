@@ -23,4 +23,5 @@ public interface TopUpPaymentRepository extends JpaRepository<TopUpPaymentEntity
     @Query("select p from TopUpPaymentEntity p where p.merchantOrderCode = :merchantOrderCode")
     Optional<TopUpPaymentEntity> findByMerchantOrderCodeForUpdate(@Param("merchantOrderCode") Long merchantOrderCode);
     Optional<TopUpPaymentEntity> findByProviderReference(String providerReference);
+    Optional<TopUpPaymentEntity> findByTransactionId(Long transactionId);
 }

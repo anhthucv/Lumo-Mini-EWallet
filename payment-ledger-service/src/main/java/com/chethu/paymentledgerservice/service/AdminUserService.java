@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.chethu.paymentledgerservice.domain.UserRole;
+import com.chethu.paymentledgerservice.domain.AuditAction;
 import com.chethu.paymentledgerservice.domain.UserStatus;
 import com.chethu.paymentledgerservice.dto.AdminUserResponse;
 import com.chethu.paymentledgerservice.entity.UserEntity;
@@ -22,10 +23,12 @@ public class AdminUserService {
 
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
+    private final AuditLogService auditLogService;
 
-    public AdminUserService(UserRepository userRepository, AccountRepository accountRepository) {
+    public AdminUserService(UserRepository userRepository, AccountRepository accountRepository, AuditLogService auditLogService) {
         this.userRepository = userRepository;
         this.accountRepository = accountRepository;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional(readOnly = true)
@@ -43,8 +46,11 @@ public class AdminUserService {
     public AdminUserResponse lockUser(Long actorId, Long targetId, String reason) {
         UserEntity target = target(targetId);
         ensureCanChange(actorId, target, true);
-        target.lock(reason.trim());
-        return AdminUserResponse.from(userRepository.save(target),
+        String trimmedReason = reason.trim();
+        target.lock(trimmedReason);
+        UserEntity saved = userRepository.save(target);
+        auditLogService.recordUserStatusChange(actorId, targetId, AuditAction.ADMIN_USER_LOCK, trimmedReason, "ACTIVE -> LOCKED");
+        return AdminUserResponse.from(saved,
                 accountRepository.findByUserId(target.getId()).orElse(null));
     }
 
@@ -52,8 +58,11 @@ public class AdminUserService {
     public AdminUserResponse unlockUser(Long actorId, Long targetId, String reason) {
         UserEntity target = target(targetId);
         ensureCanChange(actorId, target, false);
-        target.unlock(reason.trim());
-        return AdminUserResponse.from(userRepository.save(target),
+        String trimmedReason = reason.trim();
+        target.unlock(trimmedReason);
+        UserEntity saved = userRepository.save(target);
+        auditLogService.recordUserStatusChange(actorId, targetId, AuditAction.ADMIN_USER_UNLOCK, trimmedReason, "LOCKED -> ACTIVE");
+        return AdminUserResponse.from(saved,
                 accountRepository.findByUserId(target.getId()).orElse(null));
     }
 

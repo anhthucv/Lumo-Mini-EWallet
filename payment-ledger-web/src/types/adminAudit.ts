@@ -1,0 +1,1 @@
+export interface AdminAuditLog { auditId: number; createdAt: string; actorUserId: number; actorEmail: string; actorRole: string; action: string; targetType: string; targetId: number; reason: string; metadata: string | null; }

@@ -94,7 +94,7 @@ export default function AdminUsersPage() {
       <div className="dashboard-container">
         <header className="dashboard-header">
           <Link to="/dashboard" className="dashboard-brand" aria-label="Lumo home"><span className="dashboard-brand-mark" aria-hidden="true"><i /></span><strong>Lumo</strong></Link>
-          <nav className="dashboard-nav" aria-label="Main navigation"><Link to="/dashboard">Home</Link><Link to="/wallet">Wallet</Link><Link to="/activity">Activity</Link><Link className="active" to="/admin/users">Admin users</Link></nav>
+          <nav className="dashboard-nav" aria-label="Admin navigation"><Link to="/admin">Dashboard</Link><Link className="active" to="/admin/users">Users</Link><Link to="/admin/transactions">Transactions</Link><Link to="/admin/audit-logs">Audit Log</Link></nav>
           <div className="dashboard-header-actions"><NotificationBell /><Link className="admin-profile-link" to="/profile">Profile</Link></div>
         </header>
         <section className="admin-users-heading"><span className="dashboard-eyebrow">Administration</span><h1>User accounts</h1><p>Review account access and wallet status without exposing sensitive credentials.</p></section>

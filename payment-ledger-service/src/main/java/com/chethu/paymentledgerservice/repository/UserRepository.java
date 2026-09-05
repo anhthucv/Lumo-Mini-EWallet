@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.chethu.paymentledgerservice.entity.UserEntity;
+import com.chethu.paymentledgerservice.domain.UserStatus;
 
 public interface UserRepository extends JpaRepository<UserEntity, Long> {
     boolean existsByEmailIgnoreCase(String email);
@@ -15,4 +16,5 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
     Page<UserEntity> findByEmailContainingIgnoreCaseOrFullNameContainingIgnoreCase(
             String email, String fullName, Pageable pageable);
+    long countByStatus(UserStatus status);
 }

@@ -239,6 +239,18 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.FORBIDDEN, "ADMIN_USER_OPERATION_FORBIDDEN", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(AdminTransactionNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleAdminTransactionNotFound(AdminTransactionNotFoundException ex,
+            HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "TRANSACTION_NOT_FOUND", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(AdminAuditLogNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleAdminAuditLogNotFound(AdminAuditLogNotFoundException ex,
+            HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "AUDIT_LOG_NOT_FOUND", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception ex, HttpServletRequest request) {
         log.error("Unexpected {} while processing {}", ex.getClass().getSimpleName(), request.getRequestURI());

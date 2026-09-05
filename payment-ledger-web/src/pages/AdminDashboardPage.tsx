@@ -1,0 +1,15 @@
+import { useEffect, useState } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { getAdminDashboard } from '../api/adminApi';
+import { ApiError } from '../api/http';
+import { useAuth } from '../auth/AuthContext';
+import type { AdminDashboard } from '../types/adminTransactions';
+import './admin-pages.css';
+export default function AdminDashboardPage() {
+  const { user, isAuthenticated, isHydrating, logout } = useAuth(); const navigate = useNavigate(); const [data, setData] = useState<AdminDashboard | null>(null); const [error, setError] = useState<string | null>(null);
+  useEffect(() => { if (user?.role !== 'ADMIN') return; getAdminDashboard().then(setData).catch((e) => { if (e instanceof ApiError && e.status === 401) { logout(); navigate('/login', { replace: true }); } else setError('Dashboard could not be loaded.'); }); }, [logout, navigate, user?.role]);
+  if (isHydrating) return <div className="auth-loading">Restoring your session...</div>; if (!isAuthenticated) return <Navigate to="/login" replace />; if (user?.role !== 'ADMIN') return <Navigate to="/dashboard" replace />;
+  return <main className="dashboard-shell admin-page"><div className="dashboard-container"><AdminNav active="Dashboard" /><section className="admin-page-heading"><span className="dashboard-eyebrow">Operations</span><h1>Admin dashboard</h1><p>A concise view of account access and persisted financial activity.</p></section>{error && <p className="admin-error" role="alert">{error}</p>}{!data && !error && <p className="admin-state" role="status">Loading dashboard...</p>}{data && <><div className="admin-cards"><Metric label="Total users" value={data.users.total} /><Metric label="Active users" value={data.users.active} /><Metric label="Locked users" value={data.users.locked} /><Metric label="Wallets" value={data.wallets.total} /><Metric label="Successful transactions" value={data.transactions.successful} /></div><section className="admin-panel"><h2>Recent transactions</h2>{data.recentActivity.map((item) => <div className="admin-row" key={item.transactionId}><span>{item.type} · {item.userEmail ?? 'Unknown user'}</span><strong>{Number(item.amount).toLocaleString('vi-VN')} VND</strong></div>)}</section></>}</div></main>;
+}
+function Metric({ label, value }: { label: string; value: number }) { return <div className="admin-metric"><span>{label}</span><strong>{value.toLocaleString()}</strong></div>; }
+export function AdminNav({ active }: { active: string }) { return <header className="admin-nav"><Link to="/admin" className="dashboard-brand"><span className="dashboard-brand-mark" aria-hidden="true"><i /></span><strong>Lumo</strong></Link><nav aria-label="Admin navigation"><Link className={active === 'Dashboard' ? 'active' : ''} to="/admin">Dashboard</Link><Link className={active === 'Users' ? 'active' : ''} to="/admin/users">Users</Link><Link className={active === 'Transactions' ? 'active' : ''} to="/admin/transactions">Transactions</Link><Link className={active === 'Audit Log' ? 'active' : ''} to="/admin/audit-logs">Audit Log</Link></nav></header>; }
