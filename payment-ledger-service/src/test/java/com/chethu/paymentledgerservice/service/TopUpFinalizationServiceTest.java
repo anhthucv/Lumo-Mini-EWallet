@@ -28,6 +28,8 @@ import com.chethu.paymentledgerservice.entity.TransactionEntity;
 import com.chethu.paymentledgerservice.exception.InvalidPaymentWebhookException;
 import com.chethu.paymentledgerservice.payment.provider.PaymentCheckoutResult;
 import com.chethu.paymentledgerservice.payment.provider.PaymentProviderType;
+import com.chethu.paymentledgerservice.payment.provider.ProviderPaymentStatus;
+import com.chethu.paymentledgerservice.payment.provider.ProviderPaymentStatusResult;
 import com.chethu.paymentledgerservice.payment.provider.VerifiedPaymentWebhook;
 import com.chethu.paymentledgerservice.repository.AccountRepository;
 import com.chethu.paymentledgerservice.repository.JournalRepository;
@@ -76,6 +78,48 @@ class TopUpFinalizationServiceTest {
         verify(fixture.journalRepository, times(1)).save(any(JournalEntity.class));
         verify(fixture.notificationEventService, times(1)).publishDepositSuccess(
                 any(), any(), any());
+    }
+
+    @Test
+    void webhookThenStatusSyncSuccessFinalizesExactlyOnce() {
+        Fixture fixture = fixture();
+
+        fixture.service.finalizeVerifiedWebhook(webhook());
+        fixture.service.applyProviderStatus(paidStatus());
+
+        assertEquals(new BigDecimal("110000.00"), fixture.account.getBalance());
+        verify(fixture.journalRepository, times(1)).save(any(JournalEntity.class));
+        verify(fixture.transactionRepository, times(1)).save(any(TransactionEntity.class));
+        verify(fixture.notificationEventService, times(1)).publishDepositSuccess(any(), any(), any());
+    }
+
+    @Test
+    void statusSyncThenWebhookSuccessFinalizesExactlyOnce() {
+        Fixture fixture = fixture();
+
+        fixture.service.applyProviderStatus(paidStatus());
+        fixture.service.finalizeVerifiedWebhook(webhook());
+
+        assertEquals(new BigDecimal("110000.00"), fixture.account.getBalance());
+        verify(fixture.journalRepository, times(1)).save(any(JournalEntity.class));
+        verify(fixture.transactionRepository, times(1)).save(any(TransactionEntity.class));
+        verify(fixture.notificationEventService, times(1)).publishDepositSuccess(any(), any(), any());
+    }
+
+    @Test
+    void stalePendingStatusAfterSuccessDoesNotMutateFinancialState() {
+        Fixture fixture = fixture();
+
+        fixture.service.finalizeVerifiedWebhook(webhook());
+        fixture.service.applyProviderStatus(new ProviderPaymentStatusResult(
+                PaymentProviderType.PAYOS, 77L, new BigDecimal("10000.00"), "VND",
+                "payos-ref-77", "tx-77", ProviderPaymentStatus.PENDING));
+
+        assertEquals(new BigDecimal("110000.00"), fixture.account.getBalance());
+        assertEquals(TopUpPaymentStatus.SUCCESS, fixture.payment.getStatus());
+        verify(fixture.journalRepository, times(1)).save(any(JournalEntity.class));
+        verify(fixture.transactionRepository, times(1)).save(any(TransactionEntity.class));
+        verify(fixture.notificationEventService, times(1)).publishDepositSuccess(any(), any(), any());
     }
 
     @Test
@@ -201,6 +245,11 @@ class TopUpFinalizationServiceTest {
     private VerifiedPaymentWebhook webhook() {
         return new VerifiedPaymentWebhook(PaymentProviderType.PAYOS, 77L, new BigDecimal("10000.00"),
                 "VND", "payos-ref-77", "tx-77", "00", true);
+    }
+
+    private ProviderPaymentStatusResult paidStatus() {
+        return new ProviderPaymentStatusResult(PaymentProviderType.PAYOS, 77L,
+                new BigDecimal("10000.00"), "VND", "payos-ref-77", "tx-77", ProviderPaymentStatus.PAID);
     }
 
     private void setField(Object target, String name, Object value) {
