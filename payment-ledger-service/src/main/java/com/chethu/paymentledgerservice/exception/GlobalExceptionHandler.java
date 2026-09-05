@@ -20,6 +20,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.server.ResponseStatusException;
 
 import com.chethu.paymentledgerservice.dto.ErrorResponse;
+import com.chethu.paymentledgerservice.payment.provider.PaymentProviderException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -177,6 +178,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MailException.class)
     public ResponseEntity<ErrorResponse> handleMailException(MailException ex, HttpServletRequest request) {
         return error(HttpStatus.BAD_GATEWAY, "EMAIL_DELIVERY_FAILED", "Unable to send verification email", request);
+    }
+
+    @ExceptionHandler(PaymentProviderException.class)
+    public ResponseEntity<ErrorResponse> handlePaymentProviderException(PaymentProviderException ex,
+            HttpServletRequest request) {
+        return error(HttpStatus.BAD_GATEWAY, "PAYMENT_PROVIDER_ERROR", ex.getMessage(), request);
     }
 
     @ExceptionHandler(VerificationCodeNotFoundException.class)
