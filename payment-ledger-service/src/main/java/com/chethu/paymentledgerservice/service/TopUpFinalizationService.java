@@ -10,6 +10,7 @@ import com.chethu.paymentledgerservice.domain.AccountClass;
 import com.chethu.paymentledgerservice.domain.LedgerAccountType;
 import com.chethu.paymentledgerservice.domain.LedgerEntryType;
 import com.chethu.paymentledgerservice.domain.TopUpPaymentStatus;
+import com.chethu.paymentledgerservice.domain.TopUpPaymentStateMachine;
 import com.chethu.paymentledgerservice.domain.TransactionType;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.entity.JournalEntity;
@@ -19,6 +20,8 @@ import com.chethu.paymentledgerservice.entity.TopUpPaymentEntity;
 import com.chethu.paymentledgerservice.entity.TransactionEntity;
 import com.chethu.paymentledgerservice.exception.InvalidPaymentWebhookException;
 import com.chethu.paymentledgerservice.payment.provider.VerifiedPaymentWebhook;
+import com.chethu.paymentledgerservice.payment.provider.ProviderPaymentStatus;
+import com.chethu.paymentledgerservice.payment.provider.ProviderPaymentStatusResult;
 import com.chethu.paymentledgerservice.repository.AccountRepository;
 import com.chethu.paymentledgerservice.repository.JournalRepository;
 import com.chethu.paymentledgerservice.repository.LedgerAccountRepository;
@@ -53,20 +56,38 @@ public class TopUpFinalizationService {
         if (webhook == null || !webhook.successful()) {
             return;
         }
-        if (webhook.merchantOrderCode() == null || webhook.merchantOrderCode() <= 0) {
-            throw new InvalidPaymentWebhookException("Payment webhook order code is invalid.");
-        }
+        applyProviderStatus(new ProviderPaymentStatusResult(webhook.provider(), webhook.merchantOrderCode(),
+                webhook.amount(), webhook.currency(), webhook.providerReference(),
+                webhook.providerTransactionReference(), ProviderPaymentStatus.PAID));
+    }
 
+    @Transactional
+    public void applyProviderStatus(ProviderPaymentStatusResult providerStatus) {
+        if (providerStatus == null || providerStatus.status() == null) {
+            throw new InvalidPaymentWebhookException("Payment provider status is invalid.");
+        }
+        if (providerStatus.merchantOrderCode() == null || providerStatus.merchantOrderCode() <= 0) {
+            throw new InvalidPaymentWebhookException("Payment provider order code is invalid.");
+        }
         TopUpPaymentEntity payment = topUpPaymentRepository
-                .findByMerchantOrderCodeForUpdate(webhook.merchantOrderCode()).orElse(null);
+                .findByMerchantOrderCodeForUpdate(providerStatus.merchantOrderCode()).orElse(null);
         if (payment == null) {
-            log.warn("Ignoring verified webhook for unknown merchant order code: {}", webhook.merchantOrderCode());
+            log.warn("Ignoring payment status for unknown merchant order code: {}", providerStatus.merchantOrderCode());
             return;
         }
-        if (payment.getStatus() == TopUpPaymentStatus.SUCCESS) {
+        if (payment.getStatus() != TopUpPaymentStatus.PENDING) {
             return;
         }
-        validateFinancialData(payment, webhook);
+        if (providerStatus.status() == ProviderPaymentStatus.PENDING) {
+            return;
+        }
+        validateFinancialData(payment, providerStatus);
+        if (providerStatus.status() == ProviderPaymentStatus.CANCELLED) {
+            TopUpPaymentStateMachine.transition(payment.getStatus(), TopUpPaymentStatus.CANCELLED);
+            payment.markCancelled();
+            topUpPaymentRepository.save(payment);
+            return;
+        }
 
         AccountEntity account = accountRepository.findByIdForUpdate(payment.getAccount().getId())
                 .orElseThrow(() -> new InvalidPaymentWebhookException("Top-up wallet could not be found."));
@@ -89,21 +110,25 @@ public class TopUpFinalizationService {
         notificationEventService.publishDepositSuccess(account, payment.getAmount(), journal.getReference());
     }
 
-    private void validateFinancialData(TopUpPaymentEntity payment, VerifiedPaymentWebhook webhook) {
-        if (webhook.provider() == null || payment.getProvider() != null
-                && payment.getProvider() != webhook.provider()) {
-            throw new InvalidPaymentWebhookException("Payment webhook provider does not match top-up payment.");
+    private void validateFinancialData(TopUpPaymentEntity payment, ProviderPaymentStatusResult providerStatus) {
+        if (providerStatus.provider() == null || payment.getProvider() == null
+                || payment.getProvider() != providerStatus.provider()) {
+            throw new InvalidPaymentWebhookException("Payment provider does not match top-up payment.");
         }
-        if (webhook.amount() == null || payment.getAmount().compareTo(webhook.amount()) != 0) {
-            throw new InvalidPaymentWebhookException("Payment webhook amount does not match top-up payment.");
+        if (providerStatus.merchantOrderCode() == null
+                || !providerStatus.merchantOrderCode().equals(payment.getMerchantOrderCode())) {
+            throw new InvalidPaymentWebhookException("Payment order code does not match top-up payment.");
         }
-        if (isBlank(webhook.currency()) || !payment.getCurrency().equalsIgnoreCase(webhook.currency())
-                || !"VND".equalsIgnoreCase(webhook.currency())) {
-            throw new InvalidPaymentWebhookException("Payment webhook currency does not match top-up payment.");
+        if (providerStatus.amount() == null || payment.getAmount().compareTo(providerStatus.amount()) != 0) {
+            throw new InvalidPaymentWebhookException("Payment amount does not match top-up payment.");
         }
-        if (payment.getProviderReference() != null
-                && !payment.getProviderReference().equals(webhook.providerReference())) {
-            throw new InvalidPaymentWebhookException("Payment webhook reference does not match top-up payment.");
+        if (isBlank(providerStatus.currency()) || !payment.getCurrency().equalsIgnoreCase(providerStatus.currency())
+                || !"VND".equalsIgnoreCase(providerStatus.currency())) {
+            throw new InvalidPaymentWebhookException("Payment currency does not match top-up payment.");
+        }
+        if (isBlank(payment.getProviderReference())
+                || !payment.getProviderReference().equals(providerStatus.providerReference())) {
+            throw new InvalidPaymentWebhookException("Payment provider reference does not match top-up payment.");
         }
     }
 

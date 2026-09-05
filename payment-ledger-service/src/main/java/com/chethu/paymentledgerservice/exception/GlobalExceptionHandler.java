@@ -64,6 +64,18 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.NOT_FOUND, "ACCOUNT_NOT_FOUND", ex.getMessage(), request);
     }
 
+    @ExceptionHandler(TopUpPaymentNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleTopUpPaymentNotFound(TopUpPaymentNotFoundException ex,
+            HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "TOP_UP_NOT_FOUND", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(InvalidTopUpPaymentStatusTransitionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidTopUpPaymentStatusTransition(
+            InvalidTopUpPaymentStatusTransitionException ex, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "INVALID_TOP_UP_STATUS_TRANSITION", ex.getMessage(), request);
+    }
+
     @ExceptionHandler(BeneficiaryNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleBeneficiaryNotFound(BeneficiaryNotFoundException ex,
             HttpServletRequest request) {

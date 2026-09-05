@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.chethu.paymentledgerservice.domain.TopUpPaymentStatus;
+import com.chethu.paymentledgerservice.domain.TopUpPaymentStateMachine;
 import com.chethu.paymentledgerservice.payment.provider.PaymentCheckoutResult;
 import com.chethu.paymentledgerservice.payment.provider.PaymentProviderType;
 
@@ -79,6 +80,9 @@ public class TopUpPaymentEntity {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
     protected TopUpPaymentEntity() {
     }
 
@@ -122,10 +126,22 @@ public class TopUpPaymentEntity {
         if (status != TopUpPaymentStatus.PENDING || transaction == null || journal == null) {
             throw new IllegalStateException("Top-up payment cannot be finalized");
         }
+        TopUpPaymentStateMachine.transition(status, TopUpPaymentStatus.SUCCESS);
         this.status = TopUpPaymentStatus.SUCCESS;
         this.transaction = transaction;
         this.journal = journal;
         this.completedAt = LocalDateTime.now();
+    }
+
+    public void markCancelled() {
+        if (status == TopUpPaymentStatus.SUCCESS) {
+            throw new IllegalStateException("Successful top-up payments cannot be cancelled");
+        }
+        if (status == TopUpPaymentStatus.PENDING) {
+            TopUpPaymentStateMachine.transition(status, TopUpPaymentStatus.CANCELLED);
+            this.status = TopUpPaymentStatus.CANCELLED;
+            this.cancelledAt = LocalDateTime.now();
+        }
     }
 
     public Long getId() { return id; }
@@ -143,4 +159,5 @@ public class TopUpPaymentEntity {
     public TransactionEntity getTransaction() { return transaction; }
     public JournalEntity getJournal() { return journal; }
     public LocalDateTime getCompletedAt() { return completedAt; }
+    public LocalDateTime getCancelledAt() { return cancelledAt; }
 }

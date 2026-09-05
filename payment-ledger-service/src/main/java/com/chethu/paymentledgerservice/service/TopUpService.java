@@ -10,6 +10,7 @@ import com.chethu.paymentledgerservice.dto.TopUpResponse;
 import com.chethu.paymentledgerservice.entity.AccountEntity;
 import com.chethu.paymentledgerservice.entity.TopUpPaymentEntity;
 import com.chethu.paymentledgerservice.exception.AccountNotFoundException;
+import com.chethu.paymentledgerservice.exception.TopUpPaymentNotFoundException;
 import com.chethu.paymentledgerservice.payment.provider.PaymentCheckoutRequest;
 import com.chethu.paymentledgerservice.payment.provider.PaymentCheckoutResult;
 import com.chethu.paymentledgerservice.payment.provider.PaymentProvider;
@@ -61,6 +62,13 @@ public class TopUpService {
                 "LUMO " + payment.getMerchantOrderCode());
         PaymentCheckoutResult checkout = paymentProvider.createCheckout(checkoutRequest);
         return TopUpResponse.from(persistenceService.attachCheckout(payment.getId(), checkout));
+    }
+
+    public TopUpResponse getForCurrentUser(Long userId, Long topUpId) {
+        AccountEntity account = accountRepository.findByUserId(userId)
+                .orElseThrow(() -> new AccountNotFoundException(userId));
+        return TopUpResponse.from(paymentRepository.findByIdAndAccount(topUpId, account)
+                .orElseThrow(() -> new TopUpPaymentNotFoundException(topUpId)));
     }
 
     private boolean hasCheckout(TopUpPaymentEntity payment) {

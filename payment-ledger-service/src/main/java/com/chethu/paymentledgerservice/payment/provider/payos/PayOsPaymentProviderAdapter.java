@@ -10,6 +10,8 @@ import com.chethu.paymentledgerservice.payment.provider.PaymentCheckoutResult;
 import com.chethu.paymentledgerservice.payment.provider.PaymentProvider;
 import com.chethu.paymentledgerservice.payment.provider.PaymentProviderException;
 import com.chethu.paymentledgerservice.payment.provider.PaymentProviderType;
+import com.chethu.paymentledgerservice.payment.provider.ProviderPaymentStatus;
+import com.chethu.paymentledgerservice.payment.provider.ProviderPaymentStatusResult;
 import com.chethu.paymentledgerservice.payment.provider.VerifiedPaymentWebhook;
 import com.chethu.paymentledgerservice.exception.InvalidPaymentWebhookException;
 
@@ -17,6 +19,8 @@ import vn.payos.PayOS;
 import vn.payos.exception.PayOSException;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkRequest;
 import vn.payos.model.v2.paymentRequests.CreatePaymentLinkResponse;
+import vn.payos.model.v2.paymentRequests.PaymentLink;
+import vn.payos.model.v2.paymentRequests.PaymentLinkStatus;
 import vn.payos.model.webhooks.WebhookData;
 
 @Component
@@ -83,6 +87,49 @@ public class PayOsPaymentProviderAdapter implements PaymentProvider {
         } catch (RuntimeException ex) {
             throw new InvalidPaymentWebhookException();
         }
+    }
+
+    @Override
+    public ProviderPaymentStatusResult getPaymentStatus(long merchantOrderCode) {
+        if (merchantOrderCode <= 0) {
+            throw new PaymentProviderException("Payment status lookup order code is required.");
+        }
+        validateConfiguration();
+        try {
+            PaymentLink paymentLink = createPayOsClient().paymentRequests().get(merchantOrderCode);
+            if (paymentLink == null) {
+                throw new PaymentProviderException("The payment provider returned no payment status.");
+            }
+            return new ProviderPaymentStatusResult(
+                    PaymentProviderType.PAYOS,
+                    paymentLink.getOrderCode(),
+                    paymentLink.getAmount() == null ? null : BigDecimal.valueOf(paymentLink.getAmount()),
+                    SUPPORTED_CURRENCY,
+                    paymentLink.getId(),
+                    firstTransactionReference(paymentLink),
+                    mapStatus(paymentLink.getStatus()));
+        } catch (PaymentProviderException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw new PaymentProviderException("The payment provider could not retrieve payment status.", ex);
+        }
+    }
+
+    private ProviderPaymentStatus mapStatus(PaymentLinkStatus status) {
+        if (status == PaymentLinkStatus.PAID) {
+            return ProviderPaymentStatus.PAID;
+        }
+        if (status == PaymentLinkStatus.CANCELLED) {
+            return ProviderPaymentStatus.CANCELLED;
+        }
+        return ProviderPaymentStatus.PENDING;
+    }
+
+    private String firstTransactionReference(PaymentLink paymentLink) {
+        if (paymentLink.getTransactions() == null || paymentLink.getTransactions().isEmpty()) {
+            return null;
+        }
+        return paymentLink.getTransactions().get(0).getReference();
     }
 
     private CreatePaymentLinkRequest toCreatePaymentLinkRequest(PaymentCheckoutRequest request) {
