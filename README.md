@@ -1,4 +1,4 @@
-# Lumo Payment Ledger
+# Lumo Mini E-Wallet
 
 Lumo is a full-stack digital-wallet and payment-ledger portfolio application. It combines a Spring Boot REST API, a React web client, MySQL persistence, JWT authentication, double-entry accounting, and payOS incoming-payment integration.
 
