@@ -37,6 +37,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/register/send-code", "/auth/register", "/auth/login")
                         .permitAll()
                         .requestMatchers(HttpMethod.POST, "/topups/webhook")
