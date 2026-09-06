@@ -1,91 +1,66 @@
 # Payment Ledger Service
 
-Payment Ledger Service is a backend service for managing accounts and basic ledger operations.
+Payment Ledger Service is the backend API for **Lumo Mini E-Wallet**, a digital wallet application supporting authentication, wallet management, money transfers, top-ups, transaction history, and external payment integration.
+
+The application is deployed and accessible online.
+
+## Live Demo
+
+**Frontend**
+
+https://lumo-mini-e-wallet.vercel.app
+
+**Backend API**
+
+https://lumo-api-zu09.onrender.com
+
+## Key Features
+
+- User registration and email verification
+- JWT authentication
+- Wallet balance management
+- Money transfers between users
+- Transaction history
+- Wallet top-up via PayOS
+- PayOS webhook payment confirmation
+- Idempotent payment processing
+- Transaction limits and basic risk controls
+- Role-based admin APIs
 
 ## Tech Stack
 
+**Backend**
 - Java 21
 - Spring Boot
-- Maven Wrapper
-- REST API
+- Spring Security
+- Spring Data JPA
+- Hibernate
+- Maven
+- MySQL
 
-## Requirements
+**Infrastructure & Services**
+- Render
+- Aiven MySQL
+- PayOS
+- Brevo
+- Docker
 
-Before running the project, make sure you have:
+**Frontend**
+- React
+- TypeScript
+- Vite
+- Vercel
 
-- JDK installed
-- Git installed
-
-You do not need to install Maven globally because this project uses Maven Wrapper.
-
-
-## Run Application
-
-Run the application with Maven Wrapper:
-
-```bash
-./mvnw spring-boot:run
-```
-
-If the application starts successfully, it will run at:
+## Architecture
 
 ```text
-http://localhost:8080
-```
-
-## Health Check API
-
-### Request
-
-```http
-GET /health
-```
-
-Full URL:
-
-```text
-http://localhost:8080/health
-```
-
-### Response
-
-```json
-{
-  "service": "payment-ledger-service",
-  "status": "UP",
-  "version": "0.0.1"
-}
-```
-
-## Test with curl
-
-```bash
-curl http://localhost:8080/health
-```
-
-Or check the HTTP status:
-
-```bash
-curl -i http://localhost:8080/health
-```
-
-Expected status:
-
-```text
-HTTP/1.1 200
-```
-
-## Project Structure
-
-```text
-payment-ledger-service
-├── src
-│   ├── main
-│   │   ├── java
-│   │   └── resources
-│   └── test
-├── pom.xml
-├── mvnw
-├── mvnw.cmd
-└── README.md
-```
+React Frontend (Vercel)
+        |
+        v
+Spring Boot API (Render)
+        |
+        +---- MySQL (Aiven)
+        |
+        +---- PayOS
+        |
+        +---- Brevo
