@@ -2,6 +2,7 @@ package com.chethu.paymentledgerservice.service;
 
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.chethu.paymentledgerservice.domain.NotificationEventType;
@@ -11,13 +12,16 @@ import com.chethu.paymentledgerservice.event.FinancialNotificationEvent;
 public class EmailService {
     private static final String SUBJECT = "E-Wallet - Email Verification Code";
     private final JavaMailSender mailSender;
+    private final String fromAddress;
 
-    public EmailService(JavaMailSender mailSender) {
+    public EmailService(JavaMailSender mailSender, @Value("${mail.from}") String fromAddress) {
         this.mailSender = mailSender;
+        this.fromAddress = fromAddress;
     }
 
     public void sendVerificationCode(String email, String code) {
         SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromAddress);
         message.setTo(email);
         message.setSubject(SUBJECT);
         message.setText("""

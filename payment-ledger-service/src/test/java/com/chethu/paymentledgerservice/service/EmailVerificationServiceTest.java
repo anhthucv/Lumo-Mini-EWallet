@@ -202,7 +202,7 @@ public class EmailVerificationServiceTest {
         private int sendCalls;
 
         private RecordingEmailService() {
-            super(dummyMailSender());
+            super(dummyMailSender(), "lumo@example.test");
         }
 
         @Override
