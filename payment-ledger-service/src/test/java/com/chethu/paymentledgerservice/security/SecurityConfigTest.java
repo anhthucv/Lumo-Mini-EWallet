@@ -5,7 +5,9 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.lang.reflect.Field;
@@ -131,6 +133,49 @@ class SecurityConfigTest {
         mockMvc.perform(post("/topups/webhook"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("public webhook ok")));
+    }
+
+    @Test
+    void allowedFrontendOrigin_shouldPassCorsPreflightWithRequiredMethodsAndHeaders() throws Exception {
+        mockMvc.perform(options("/wallet/me")
+                .header("Origin", "https://lumo-mini-e-wallet.vercel.app")
+                .header("Access-Control-Request-Method", "GET")
+                .header("Access-Control-Request-Headers", "Authorization,Content-Type,X-Request-Id,Idempotency-Key"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin",
+                        "https://lumo-mini-e-wallet.vercel.app"))
+                .andExpect(header().string("Access-Control-Allow-Methods",
+                        org.hamcrest.Matchers.allOf(
+                                org.hamcrest.Matchers.containsString("GET"),
+                                org.hamcrest.Matchers.containsString("POST"),
+                                org.hamcrest.Matchers.containsString("PUT"),
+                                org.hamcrest.Matchers.containsString("PATCH"),
+                                org.hamcrest.Matchers.containsString("DELETE"),
+                                org.hamcrest.Matchers.containsString("OPTIONS"))))
+                .andExpect(header().string("Access-Control-Allow-Headers",
+                        org.hamcrest.Matchers.allOf(
+                                org.hamcrest.Matchers.containsString("Authorization"),
+                                org.hamcrest.Matchers.containsString("Content-Type"),
+                                org.hamcrest.Matchers.containsString("X-Request-Id"),
+                                org.hamcrest.Matchers.containsString("Idempotency-Key"))));
+    }
+
+    @Test
+    void unapprovedOrigin_shouldNotReceiveCorsPermission() throws Exception {
+        mockMvc.perform(options("/wallet/me")
+                .header("Origin", "https://malicious.example")
+                .header("Access-Control-Request-Method", "GET"))
+                .andExpect(status().isForbidden())
+                .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+    }
+
+    @Test
+    void allowedOrigin_doesNotBypassProtectedRoute() throws Exception {
+        mockMvc.perform(get("/protected")
+                .header("Origin", "https://lumo-mini-e-wallet.vercel.app"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("Access-Control-Allow-Origin",
+                        "https://lumo-mini-e-wallet.vercel.app"));
     }
 
     private UserEntity user(Long id, String email, UserRole role, UserStatus status) {
