@@ -32,6 +32,7 @@ import './wallet.css';
 import './dashboard.css';
 
 type WalletOperation = 'transfer' | 'topup' | 'withdraw';
+const ACCOUNT_NUMBER_PATTERN = /^ACC-\d{12}$/;
 
 const vndFormatter = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -116,7 +117,7 @@ function getWithdrawErrorMessage(error: unknown): string {
 
 function getRecipientErrorMessage(error: unknown): string {
   if (error instanceof ApiError && error.status === 404) {
-    return 'No recipient was found for that account number.';
+    return 'Account not found';
   }
   if (error instanceof ApiError && error.status === 400) {
     return error.message || 'Enter a valid recipient account number.';
@@ -240,6 +241,7 @@ export default function WalletPage() {
   const transferAttempt = useRef<IdempotencyAttempt | null>(null);
   const topUpAttempt = useRef<IdempotencyAttempt | null>(null);
   const recipientInputRef = useRef<HTMLInputElement>(null);
+  const recipientLookupId = useRef(0);
 
   async function refreshLimits() {
     try {
@@ -462,48 +464,53 @@ export default function WalletPage() {
     setTransferSuccess(null);
   }
 
-  async function lookupRecipient(accountNumberInput = recipientAccountNumber) {
-    setRecipientError(null);
-    setRecipient(null);
-    setTransferError(null);
-    setTransferSuccess(null);
+  useEffect(() => {
+    const accountNumber = recipientAccountNumber.trim();
+    const lookupId = recipientLookupId.current + 1;
+    recipientLookupId.current = lookupId;
+    const controller = new AbortController();
 
-    const accountNumber = accountNumberInput.trim();
-    if (!accountNumber) {
-      setRecipientError('Enter a recipient account number.');
-      return;
+    setLookingUpRecipient(false);
+    if (!ACCOUNT_NUMBER_PATTERN.test(accountNumber)) {
+      return () => controller.abort();
     }
     if (wallet && accountNumber === wallet.accountNumber) {
       setRecipientError('You cannot transfer money to your own account.');
-      return;
+      return () => controller.abort();
     }
 
-    setLookingUpRecipient(true);
-    try {
-      setRecipient(await getRecipient(accountNumber));
-    } catch (requestError) {
-      if (requestError instanceof ApiError && requestError.status === 401) {
-        logout();
-        navigate('/login', { replace: true });
-        return;
+    setRecipientError(null);
+    const timeout = window.setTimeout(async () => {
+      if (recipientLookupId.current !== lookupId) return;
+      setLookingUpRecipient(true);
+      try {
+        const resolvedRecipient = await getRecipient(accountNumber, controller.signal);
+        if (recipientLookupId.current !== lookupId) return;
+        setRecipient(resolvedRecipient);
+      } catch (requestError) {
+        if (controller.signal.aborted || recipientLookupId.current !== lookupId) return;
+        if (requestError instanceof ApiError && requestError.status === 401) {
+          logout();
+          navigate('/login', { replace: true });
+          return;
+        }
+        setSelectedBeneficiaryId(null);
+        setRecipientError(getRecipientErrorMessage(requestError));
+      } finally {
+        if (recipientLookupId.current === lookupId) setLookingUpRecipient(false);
       }
-      setSelectedBeneficiaryId(null);
-      setRecipientError(getRecipientErrorMessage(requestError));
-    } finally {
-      setLookingUpRecipient(false);
-    }
-  }
+    }, 450);
 
-  async function handleRecipientLookup(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    await lookupRecipient();
-  }
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [logout, navigate, recipientAccountNumber, wallet]);
 
   function selectBeneficiary(beneficiary: Beneficiary) {
     handleRecipientChange(beneficiary.accountNumber);
     setSelectedBeneficiaryId(beneficiary.id);
     recipientInputRef.current?.focus();
-    void lookupRecipient(beneficiary.accountNumber);
   }
 
   function formatBeneficiaryAccount(accountNumber: string): string {
@@ -623,7 +630,7 @@ export default function WalletPage() {
     setTransferSuccess(null);
 
     if (!recipient || recipient.accountNumber !== recipientAccountNumber.trim()) {
-      setTransferError('Look up and confirm the recipient before transferring.');
+      setTransferError('Confirm a valid recipient before transferring.');
       return;
     }
     const numericAmount = Number(transferAmount);
@@ -862,7 +869,7 @@ export default function WalletPage() {
                   </div>
                 )}
                 {!beneficiariesLoading && !beneficiariesError && beneficiaries.length === 0 && (
-                  <div className="saved-recipients-state">No saved recipients yet. <button type="button" className="saved-recipient-add" onClick={() => setAddRecipientOpen(true)}>+ Add recipient</button></div>
+                  <div className="saved-recipients-state">No saved recipients yet.</div>
                 )}
                 {!beneficiariesLoading && beneficiaries.length > 0 && (
                   <div className="saved-recipient-list">
@@ -883,13 +890,9 @@ export default function WalletPage() {
                     ))}
                   </div>
                 )}
-                {lookingUpRecipient && (
-                  <div className="saved-recipients-status" role="status" aria-live="polite">
-                    Checking recipient details...
-                  </div>
-                )}
+                {lookingUpRecipient && <div className="recipient-lookup-status" role="status" aria-live="polite">Checking recipient...</div>}
               </div>
-              <form className="transfer-lookup" onSubmit={handleRecipientLookup} noValidate>
+              <div className="transfer-lookup">
                 <label className="field-group" htmlFor="recipient-account-number">
                   <span className="field-label">Recipient account number</span>
                   <input
@@ -899,17 +902,15 @@ export default function WalletPage() {
                     value={recipientAccountNumber}
                     onChange={(event) => handleRecipientChange(event.target.value)}
                     placeholder="ACC-123456"
-                    disabled={lookingUpRecipient || transferring}
+                    maxLength={16}
+                    disabled={transferring}
                   />
                 </label>
-                <button type="submit" className="secondary-button" disabled={lookingUpRecipient || transferring}>
-                  {lookingUpRecipient ? 'Looking up...' : 'Look up recipient'}
-                </button>
-              </form>
+              </div>
               {recipientError && <div className="banner error" role="alert">{recipientError}</div>}
               {recipient && (
-                <div className="recipient-confirmation" role="status">
-                  <span className="deposit-kicker">Recipient</span>
+                <div className="recipient-confirmation" role="status" aria-live="polite">
+                  <div className="recipient-confirmation-heading"><span className="recipient-check" aria-hidden="true">✓</span><span className="deposit-kicker">Recipient verified</span></div>
                   <strong>Account: {recipient.accountNumber}</strong>
                   <span>Name: {recipient.ownerName}</span>
                 </div>

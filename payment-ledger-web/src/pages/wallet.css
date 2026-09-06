@@ -190,7 +190,7 @@
 }
 
 .saved-recipients-state {
-  color: var(--muted);
+  color: #5f584d;
   font-size: 0.86rem;
 }
 
@@ -213,8 +213,31 @@
 }
 
 .saved-recipients-status {
-  color: var(--primary);
+  color: #8a6500;
   font-size: 0.86rem;
+}
+
+.recipient-lookup-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6f5a18;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.recipient-lookup-status::before {
+  width: 8px;
+  height: 8px;
+  border: 2px solid #e8c83b;
+  border-top-color: #8a6500;
+  border-radius: 50%;
+  content: '';
+  animation: recipient-check 0.8s linear infinite;
+}
+
+@keyframes recipient-check {
+  to { transform: rotate(360deg); }
 }
 
 .transfer-lookup {
@@ -226,16 +249,39 @@
 
 .recipient-confirmation {
   display: grid;
-  gap: 5px;
-  padding: 14px 16px;
-  border: 1px solid rgba(52, 211, 153, 0.28);
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid #8bd5bd;
   border-radius: 12px;
-  background: rgba(52, 211, 153, 0.08);
-  color: var(--muted);
+  background: #effaf5;
+  color: #3f554b;
+}
+
+.recipient-confirmation-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recipient-confirmation .deposit-kicker {
+  color: #147357;
+}
+
+.recipient-check {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: #16805f;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
 }
 
 .recipient-confirmation strong {
-  color: var(--text);
+  color: #243b32;
+  font-size: 0.96rem;
 }
 
 .history-panel {
@@ -741,7 +787,18 @@
   background: #f59e0b;
 }
 
+.wallet-operation .primary-button:disabled,
+.wallet-operation .secondary-button:disabled {
+  border-color: #d8d0c2;
+  background: #e7e1d7;
+  color: #756d61;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
 .wallet-operation .transfer-panel {
+  gap: 12px;
   border: 0;
   background: transparent;
 }
@@ -765,11 +822,15 @@
 .wallet-operation .saved-recipient {
   border-color: #e9e1d4;
   background: #fff;
-  color: #81796d;
+  color: #5f584d;
 }
 
 .wallet-operation .saved-recipient strong {
-  color: #3d3831;
+  color: #24211d;
+}
+
+.wallet-operation .saved-recipient small {
+  color: #6f5a18;
 }
 
 .wallet-operation .saved-recipient:hover:not(:disabled),
@@ -1060,6 +1121,18 @@
 .managed-recipient-edit { display: grid; gap: 10px; }
 .managed-recipient-add { width: max-content; margin-top: 14px; }
 
+.wallet-operation .banner.success {
+  border-color: #8bd5bd;
+  background: #effaf5;
+  color: #145c46;
+}
+
+.wallet-operation .banner.error {
+  border-color: #e5b8a8;
+  background: #fff4ef;
+  color: #8a3e2d;
+}
+
 @media (max-width: 640px) {
   .lumo-wallet-shell { padding-block: 18px 36px; }
   .lumo-wallet-shell .wallet-topbar { flex-direction: row; }
@@ -1068,6 +1141,7 @@
   .lumo-balance-panel { min-height: 0; }
   .lumo-balance-panel strong { font-size: 2.4rem; }
   .wallet-operation { padding: 16px; }
+  .wallet-operation .transfer-panel { gap: 10px; }
   .wallet-operation-switcher button { padding-inline: 6px; font-size: 0.75rem; }
   .wallet-details-list { grid-template-columns: 1fr; }
   .wallet-recent-activity { padding: 20px 16px; }
