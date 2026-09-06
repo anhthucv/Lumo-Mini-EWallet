@@ -7,6 +7,14 @@
 .profile-sidebar { display: grid; align-content: start; gap: 14px; min-width: 0; }
 .profile-main-column { display: grid; gap: 16px; min-width: 0; }
 .profile-panel { display: grid; gap: 18px; padding: clamp(20px, 3vw, 28px); border: 1px solid #ebe4d8; border-radius: 20px; background: #fff; box-shadow: 0 12px 32px rgba(72, 54, 28, .045); }
+.account-number-panel { gap: 14px; border-color: #eadca8; background: linear-gradient(135deg, #fffdf2, #fff8dc); }
+.account-number-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.account-number-row strong { min-width: 0; color: #24211d; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: clamp(1.05rem, 3vw, 1.35rem); letter-spacing: .02em; overflow-wrap: anywhere; }
+.account-number-copy { flex: 0 0 auto; min-height: 42px; border: 1px solid #d8b52c; border-radius: 10px; background: #facc15; color: #4f3900; cursor: pointer; padding: 0 15px; font: inherit; font-weight: 800; }
+.account-number-copy:hover, .account-number-copy:focus-visible { background: #f5c519; }
+.account-number-state { color: #5f584d; font-size: .88rem; }
+.account-number-error { color: #8a3e2d; }
+.account-number-feedback { color: #147357; font-size: .84rem; font-weight: 800; }
 .profile-overview { align-content: center; }
 .profile-identity { display: grid; justify-items: center; gap: 16px; text-align: center; }
 .profile-avatar { display: grid; width: 76px; height: 76px; place-items: center; border-radius: 50%; background: #24211d; color: #facc15; font-size: 1.25rem; font-weight: 700; letter-spacing: .04em; }
@@ -41,4 +49,4 @@
 .signout-button:hover, .signout-button:focus-visible { background: #fff1ec; }
 .profile-state { display: flex; min-height: 180px; align-items: center; justify-content: center; gap: 12px; padding: 24px; color: #81796d; }
 .profile-error { flex-direction: column; text-align: center; color: #a04432; }
-@media (max-width: 760px) { .profile-heading { margin-top: 32px; } .profile-workspace { grid-template-columns: 1fr; } .profile-details { grid-template-columns: 1fr; } .profile-save { justify-self: stretch; } }
+@media (max-width: 760px) { .profile-heading { margin-top: 32px; } .profile-workspace { grid-template-columns: 1fr; } .profile-details { grid-template-columns: 1fr; } .profile-save { justify-self: stretch; } .account-number-row { align-items: stretch; flex-direction: column; } .account-number-row strong { font-size: 1rem; } .account-number-copy { width: 100%; } }

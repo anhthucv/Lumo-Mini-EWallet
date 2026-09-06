@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ApiError } from '../api/http';
 import NotificationBell from '../components/NotificationBell';
 import { changeMyPassword, getMyProfile, updateMyProfile } from '../api/profileApi';
+import { getMyWallet } from '../api/walletApi';
 import { useAuth } from '../auth/AuthContext';
 import type { ProfileResponse } from '../types/profile';
 import './profile.css';
@@ -35,6 +36,9 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const { logout, updateUser } = useAuth();
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
+  const [accountNumber, setAccountNumber] = useState<string | null>(null);
+  const [accountNumberLoading, setAccountNumberLoading] = useState(true);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -77,6 +81,42 @@ export default function ProfilePage() {
     void loadProfile();
     return () => controller.abort();
   }, [logout, navigate, retryKey]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadAccountNumber() {
+      setAccountNumberLoading(true);
+      try {
+        const wallet = await getMyWallet(controller.signal);
+        setAccountNumber(wallet.accountNumber);
+      } catch (requestError) {
+        if (controller.signal.aborted) return;
+        if (requestError instanceof ApiError && requestError.status === 401) {
+          logout();
+          navigate('/login', { replace: true });
+          return;
+        }
+        setAccountNumber(null);
+      } finally {
+        if (!controller.signal.aborted) setAccountNumberLoading(false);
+      }
+    }
+
+    void loadAccountNumber();
+    return () => controller.abort();
+  }, [logout, navigate, retryKey]);
+
+  async function copyAccountNumber() {
+    if (!accountNumber) return;
+    try {
+      await navigator.clipboard.writeText(accountNumber);
+      setCopyFeedback('Account number copied');
+      window.setTimeout(() => setCopyFeedback(null), 2200);
+    } catch {
+      setCopyFeedback('Copy failed. Please select the account number manually.');
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -198,6 +238,14 @@ export default function ProfilePage() {
               <section className="profile-account-actions" aria-label="Account actions"><button type="button" className="signout-button" onClick={handleSignOut}>Sign out</button></section>
             </aside>
             <div className="profile-main-column">
+
+            <section className="profile-panel account-number-panel" aria-labelledby="account-number-title">
+              <div className="profile-panel-heading"><div><span className="profile-kicker">Receive money</span><h2 id="account-number-title">Account number</h2></div></div>
+              {accountNumberLoading && <div className="account-number-state" role="status">Loading account number...</div>}
+              {!accountNumberLoading && accountNumber && <div className="account-number-row"><strong>{accountNumber}</strong><button type="button" className="account-number-copy" onClick={() => void copyAccountNumber()}>Copy</button></div>}
+              {!accountNumberLoading && !accountNumber && <div className="account-number-state account-number-error" role="status">Account number is unavailable right now.</div>}
+              {copyFeedback && <div className="account-number-feedback" role="status" aria-live="polite">{copyFeedback}</div>}
+            </section>
 
             <section className="profile-panel personal-panel" aria-labelledby="personal-information-title">
               <div className="profile-panel-heading"><div><span className="profile-kicker">Personal details</span><h2 id="personal-information-title">Personal information</h2></div>{!editingProfile && <button type="button" className="profile-edit-trigger" onClick={() => { setEditingProfile(true); setFormError(null); setSuccess(null); }}>Edit</button>}</div>
